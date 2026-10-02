@@ -34,14 +34,19 @@ export function wellDriftBound(g: number, a: number): number {
   return g / (2 * a);
 }
 
-/** Scratch output of wellDrift. */
-export const driftOut = { x: 0, y: 0 };
+/** Scratch output of wellDrift: [x, y] drift per metre of travel. */
+export const DRIFT = new Float64Array(2);
+/** Scratch input of wellDrift: [x, y, s] (typed slots avoid boxing double arguments). */
+export const DRIFT_AT = new Float64Array(3);
 
 /**
- * Lateral drift per metre of forward travel at (x, y, s), summed over the chunk's wells:
+ * Lateral drift per metre of forward travel at DRIFT_AT = (x, y, s), summed over the chunk's wells:
  * g = G·w(Δs)·d/(|d|² + a²), w = 1 − (Δs/range)², pointing at the singularity.
  */
-export function wellDrift(c: ChunkData, x: number, y: number, s: number): void {
+export function wellDrift(c: ChunkData): void {
+  const x = DRIFT_AT[0]!;
+  const y = DRIFT_AT[1]!;
+  const s = DRIFT_AT[2]!;
   let gx = 0;
   let gy = 0;
   if (c.gMax > 0) {
@@ -60,6 +65,6 @@ export function wellDrift(c: ChunkData, x: number, y: number, s: number): void {
       gy += dy * f;
     }
   }
-  driftOut.x = gx;
-  driftOut.y = gy;
+  DRIFT[0] = gx;
+  DRIFT[1] = gy;
 }

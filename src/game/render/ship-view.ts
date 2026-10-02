@@ -21,7 +21,13 @@ export class ShipView {
 
   constructor() {
     this.geometries = SHIPS.map((s) => shipGeometry(s));
-    this.material = litMaterial({ body: 0xffffff, rim: 0x9fdcff, rimStrength: 0.55, rimPower: 2.6 });
+    this.material = litMaterial({
+      body: 0xffffff,
+      rim: 0x9fdcff,
+      rimStrength: 0.55,
+      rimPower: 2.6,
+      nearCut: 0,
+    });
     this.mesh = new THREE.Mesh(this.geometries[0]!, this.material);
     this.body.add(this.mesh);
     this.flameMat = glowMaterial(0x56b4e9, 1.4);

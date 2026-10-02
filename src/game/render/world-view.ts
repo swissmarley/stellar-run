@@ -6,7 +6,7 @@ import { OBSTACLES } from '../../data/obstacles.ts';
 import { TUNING } from '../../data/tuning.ts';
 import type { Archetype } from '../../data/types.ts';
 import { archetypeGeometry, shardGeometry } from './geometry.ts';
-import { type LitMaterial, litMaterial } from './materials.ts';
+import { type LitMaterial, litMaterial, SHARED } from './materials.ts';
 
 const ARCHETYPES: readonly Archetype[] = [
   'rock',
@@ -38,10 +38,42 @@ const SPHERE_VISUAL: Record<Archetype, number> = {
   crate: 1,
 };
 
+const DISC_VERT = /* glsl */ `
+varying vec2 vUv;
+varying float vFog;
+uniform float uFogNear;
+uniform float uFogFar;
+void main() {
+  vUv = uv;
+  vec4 mv = viewMatrix * modelMatrix * instanceMatrix * vec4(position, 1.0);
+  vFog = smoothstep(uFogNear, uFogFar, -mv.z);
+  gl_Position = projectionMatrix * mv;
+}
+`;
+
+const DISC_FRAG = /* glsl */ `
+uniform float uTime;
+uniform vec3 uInner;
+uniform vec3 uOuter;
+varying vec2 vUv;
+varying float vFog;
+void main() {
+  vec2 q = vUv - 0.5;
+  float r = length(q) * 2.0;
+  float a = atan(q.y, q.x);
+  float band = 0.5 + 0.5 * sin(a * 3.0 - uTime * 2.4 + r * 14.0);
+  float ring = smoothstep(0.32, 0.42, r) * smoothstep(1.0, 0.6, r);
+  vec3 c = mix(uInner, uOuter, smoothstep(0.35, 1.0, r)) * (0.55 + 0.6 * band);
+  float alpha = ring * (0.65 + 0.35 * band) * (1.0 - vFog);
+  gl_FragColor = vec4(c * alpha, alpha);
+}
+`;
+
 /** Per-archetype materials, shared by every chunk slot. Colours are retinted per biome by the FX layer. */
 export class WorldMaterials {
   readonly byArch: LitMaterial[];
   readonly shard: LitMaterial;
+  readonly disc: THREE.ShaderMaterial;
 
   constructor() {
     this.byArch = ARCHETYPES.map((a): LitMaterial => {
@@ -75,6 +107,21 @@ export class WorldMaterials {
       rim: 0xffffff,
       rimStrength: 0.6,
     });
+    this.disc = new THREE.ShaderMaterial({
+      vertexShader: DISC_VERT,
+      fragmentShader: DISC_FRAG,
+      uniforms: {
+        uTime: SHARED.uTime,
+        uFogNear: SHARED.uFogNear,
+        uFogFar: SHARED.uFogFar,
+        uInner: { value: new THREE.Color(0xffd27a) },
+        uOuter: { value: new THREE.Color(0xcc79a7) },
+      },
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+    });
   }
 }
 
@@ -90,6 +137,8 @@ class SlotView {
   readonly group = new THREE.Group();
   readonly meshes: THREE.InstancedMesh[];
   readonly shards: THREE.InstancedMesh;
+  readonly discs: THREE.InstancedMesh;
+  private discCount = 0;
   readonly counts: Int32Array;
   /** Obstacle i → archetype index and instance index. */
   readonly instArch = new Uint8Array(TUNING.MAX_OBSTACLES_PER_CHUNK);
@@ -119,6 +168,12 @@ class SlotView {
     this.shards.frustumCulled = false;
     this.shards.visible = false;
     this.group.add(this.shards);
+    const disc = new THREE.PlaneGeometry(1, 1);
+    this.discs = new THREE.InstancedMesh(disc, mats.disc, 8);
+    this.discs.frustumCulled = false;
+    this.discs.visible = false;
+    this.discs.renderOrder = 6;
+    this.group.add(this.discs);
     this.group.visible = false;
   }
 
@@ -126,6 +181,7 @@ class SlotView {
     this.builtIndex = c.index;
     this.counts.fill(0);
     this.droneCount = 0;
+    this.discCount = 0;
     for (let i = 0; i < c.obsCount; i++) {
       const def = OBSTACLES[c.obsDef[i]!]!;
       const a = ARCH_INDEX[def.archetype];
@@ -134,7 +190,19 @@ class SlotView {
       this.instIdx[i] = j;
       if (c.obsKind[i] === KIND_DRONE) this.drones[this.droneCount++] = i;
       this.writeObstacle(c, i, c.obsX[i]!, c.obsY[i]!);
+      if (def.archetype === 'singularity' && c.isActive(i) && this.discCount < 8) {
+        const k = c.obsR[i]! * 7.5;
+        tmpE.set(-1.15, 0.2, 0.3);
+        tmpQ.setFromEuler(tmpE);
+        tmpP.set(c.obsX[i]!, c.obsY[i]!, -(c.obsS[i]! - c.startS));
+        tmpS.set(k, k, k);
+        tmpM.compose(tmpP, tmpQ, tmpS);
+        this.discs.setMatrixAt(this.discCount++, tmpM);
+      }
     }
+    this.discs.count = this.discCount;
+    this.discs.visible = this.discCount > 0;
+    this.discs.instanceMatrix.needsUpdate = true;
     for (let a = 0; a < this.meshes.length; a++) {
       const m = this.meshes[a]!;
       m.count = this.counts[a]!;

@@ -8,12 +8,19 @@ import { computeShipStats, ShipStats, type UpgradeLevels } from '../core/sim/shi
 import { BIOMES } from '../data/biomes.ts';
 import { DT, TUNING } from '../data/tuning.ts';
 import type { ResultsData, Ui } from '../ui/ui.ts';
+import { Feedback } from './feedback.ts';
 import type { Hud } from './hud/hud.ts';
+import { Popups } from './hud/popups.ts';
 import type { InputRouter } from './input/input-router.ts';
 import { CameraRig } from './render/camera-rig.ts';
-import { Rails, Stars } from './render/environment.ts';
+import { Rails } from './render/environment.ts';
 import { SHARED } from './render/materials.ts';
+import { Particles } from './render/particles.ts';
+import { PostFX } from './render/post.ts';
+import { AutoQuality, lowerTier, QUALITY, type QualityTier } from './render/quality.ts';
 import { ShipView } from './render/ship-view.ts';
+import { bakeNoiseTexture, Sky } from './render/sky.ts';
+import { Dust, SpeedLines } from './render/speed-fx.ts';
 import { WorldView } from './render/world-view.ts';
 
 /** Listener for sim events re-emitted by the game (audio, haptics, popups, FX). Payload is read in place. */
@@ -37,10 +44,23 @@ export interface GameHooks {
   /** Next run's setup (ship, upgrades, seed). */
   nextRun(): RunSetup;
   onFlowChange?(state: string): void;
+  onQualityChange?(tier: QualityTier): void;
 }
 
+export interface GameSettings {
+  reducedMotion: boolean;
+  shakeScale: number;
+  flashes: boolean;
+  popups: boolean;
+  quality: 'auto' | QualityTier;
+  /** Battery saver: render every other frame (sim still steps at 120 Hz). */
+  fps30: boolean;
+}
+
+const tmpSize = new THREE.Vector2();
+
 /**
- * Owns the fixed-timestep loop: samples input per tick, advances the deterministic RunSim at 60 Hz,
+ * Owns the fixed-timestep loop: samples input per tick, advances the deterministic RunSim at 120 Hz,
  * drains sim events, and renders an interpolated frame. Hit-stop, slow-mo and focus only scale wall time.
  */
 export class Game {
@@ -51,7 +71,23 @@ export class Game {
   readonly world = new WorldView();
   readonly ship = new ShipView();
   readonly rails = new Rails();
-  readonly stars = new Stars();
+  readonly sky = new Sky(bakeNoiseTexture());
+  readonly speedLines = new SpeedLines();
+  readonly dust = new Dust();
+  readonly particles = new Particles(1024);
+  readonly post = new PostFX();
+  readonly popups = new Popups();
+  readonly feedback: Feedback;
+  readonly autoQuality = new AutoQuality();
+  tier: QualityTier = 'high';
+  settings: GameSettings = {
+    reducedMotion: false,
+    shakeScale: 1,
+    flashes: true,
+    popups: true,
+    quality: 'auto',
+    fps30: false,
+  };
   private readonly frame = new InputFrame();
   private readonly stats = new ShipStats();
   private readonly listeners: SimEventListener[] = [];
@@ -63,11 +99,13 @@ export class Game {
   private rafId = 0;
   private biome = -1;
   private runEnded = false;
-  /** Frame-time samples (ms) in a preallocated ring, for the perf overlay and auto quality. */
+  private skipFrame = false;
+  private width = 1;
+  private height = 1;
+  /** Frame-time samples (ms) in a preallocated ring, for the perf overlay and the bench. */
   readonly frameTimes = new Float64Array(240);
   frameCount = 0;
   ticksThisFrame = 0;
-  paused = false;
   /** Optional per-tick input override (bot / replay). */
   inputOverride: ((sim: RunSim, out: InputFrame) => void) | null = null;
   /** Frame callback after rendering (perf overlay, bench). */
@@ -79,6 +117,21 @@ export class Game {
   readonly ui: Ui;
   source: ChunkSource;
   readonly hooks: GameHooks;
+
+  private readonly targetFog = new THREE.Color();
+  private readonly targetLight = new THREE.Color();
+  private readonly targetAmbient = new THREE.Color();
+  private readonly targetRail = new THREE.Color();
+  private readonly targetRock = new THREE.Color();
+  private readonly targetA = new THREE.Color();
+  private readonly targetB = new THREE.Color();
+  private readonly targetC = new THREE.Color();
+  private readonly targetStars = new THREE.Color();
+  private readonly gradeLift = new THREE.Vector3();
+  private readonly gradeGamma = new THREE.Vector3(1, 1, 1);
+  private readonly gradeGain = new THREE.Vector3(1, 1, 1);
+  private gradeSat = 1;
+  private gradeContrast = 1;
 
   constructor(
     renderer: THREE.WebGLRenderer,
@@ -94,8 +147,17 @@ export class Game {
     this.ui = ui;
     this.source = source;
     this.hooks = hooks;
-    this.scene.add(this.world.root, this.ship.root, this.rails.root, this.stars.points);
-    this.scene.background = new THREE.Color(0x000000);
+    this.scene.add(
+      this.sky.mesh,
+      this.world.root,
+      this.ship.root,
+      this.rails.root,
+      this.speedLines.mesh,
+      this.dust.mesh,
+      this.particles.points,
+    );
+    this.feedback = new Feedback(this.sim, this.rig, this.particles, this.popups, this.post);
+    this.on((c, d, o) => this.feedback.handle(c, d, o));
     this.input.bind(this.sim);
     this.setBiome(0, true);
   }
@@ -104,9 +166,35 @@ export class Game {
     this.listeners.push(fn);
   }
 
+  /** Applies a quality tier (pixel ratio, post-processing, particle/dust budgets). */
+  applyQuality(tier: QualityTier): void {
+    this.tier = tier;
+    const q = QUALITY[tier];
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, q.pixelRatioCap));
+    this.post.configure(q.post);
+    this.dust.setCount(q.dust);
+    this.sky.uniforms.uDetail.value = q.skyDetail ? 1 : 0;
+    this.resize(this.width, this.height);
+    this.autoQuality.reset();
+    this.hooks.onQualityChange?.(tier);
+  }
+
+  applySettings(s: GameSettings): void {
+    this.settings = { ...s };
+    this.rig.reducedMotion = s.reducedMotion;
+    this.rig.shakeScale = s.shakeScale;
+    this.feedback.settings = { reducedMotion: s.reducedMotion, flashes: s.flashes, popups: s.popups };
+    this.autoQuality.enabled = s.quality === 'auto';
+  }
+
   resize(w: number, h: number): void {
+    this.width = w;
+    this.height = h;
     this.renderer.setSize(w, h, false);
+    this.renderer.getDrawingBufferSize(tmpSize);
+    this.post.setSize(tmpSize.x, tmpSize.y);
     this.rig.setAspect(w / Math.max(1, h));
+    this.feedback.setViewport(w, h);
   }
 
   start(): void {
@@ -129,6 +217,8 @@ export class Game {
     this.ship.setShip(setup.shipIndex, setup.engine, setup.paint);
     this.ship.setVisible(true);
     this.world.invalidate();
+    this.particles.clear();
+    this.popups.clear();
     this.rig.reset();
     this.input.resetForRun();
     this.acc = 0;
@@ -212,22 +302,47 @@ export class Game {
     if (index === this.biome) return;
     this.biome = index;
     const b = BIOMES[index]!;
-    this.targetFog.setHex(b.palette.fog);
-    this.targetLight.setHex(b.palette.light);
-    this.targetAmbient.setHex(b.palette.ambient);
-    this.targetRail.setHex(b.palette.rail);
-    if (instant) {
-      SHARED.uFogColor.value.copy(this.targetFog);
-      SHARED.uLightColor.value.copy(this.targetLight);
-      SHARED.uAmbient.value.copy(this.targetAmbient);
-      this.rails.material.uniforms.uColor.value.copy(this.targetRail);
-    }
+    const p = b.palette;
+    this.targetFog.setHex(p.fog);
+    this.targetLight.setHex(p.light);
+    this.targetAmbient.setHex(p.ambient);
+    this.targetRail.setHex(p.rail);
+    this.targetRock.setHex(p.rock);
+    this.targetA.setHex(p.nebulaA);
+    this.targetB.setHex(p.nebulaB);
+    this.targetC.setHex(p.nebulaC);
+    this.targetStars.setHex(p.stars);
+    const g = b.grading;
+    this.gradeLift.set(g.lift[0], g.lift[1], g.lift[2]);
+    this.gradeGamma.set(g.gamma[0], g.gamma[1], g.gamma[2]);
+    this.gradeGain.set(g.gain[0], g.gain[1], g.gain[2]);
+    this.gradeSat = g.saturation;
+    this.gradeContrast = g.contrast;
+    if (instant) this.blendBiome(1);
   }
 
-  private readonly targetFog = new THREE.Color();
-  private readonly targetLight = new THREE.Color();
-  private readonly targetAmbient = new THREE.Color();
-  private readonly targetRail = new THREE.Color();
+  /** Eases every biome-dependent colour toward its target (k = blend factor this frame). */
+  private blendBiome(k: number): void {
+    SHARED.uFogColor.value.lerp(this.targetFog, k);
+    SHARED.uLightColor.value.lerp(this.targetLight, k);
+    SHARED.uAmbient.value.lerp(this.targetAmbient, k);
+    this.rails.material.uniforms.uColor.value.lerp(this.targetRail, k);
+    const su = this.sky.uniforms;
+    su.uFog.value.lerp(this.targetFog, k);
+    su.uColA.value.lerp(this.targetA, k);
+    su.uColB.value.lerp(this.targetB, k);
+    su.uColC.value.lerp(this.targetC, k);
+    su.uStars.value.lerp(this.targetStars, k);
+    const mats = this.world.mats.byArch;
+    mats[0]!.uniforms.uBody.value.lerp(this.targetRock, k);
+    mats[1]!.uniforms.uBody.value.lerp(this.targetRock, k);
+    const gr = this.post.grading;
+    gr.uLift.value.lerp(this.gradeLift, k);
+    gr.uGamma.value.lerp(this.gradeGamma, k);
+    gr.uGain.value.lerp(this.gradeGain, k);
+    gr.uSat.value += (this.gradeSat - gr.uSat.value) * k;
+    gr.uContrast.value += (this.gradeContrast - gr.uContrast.value) * k;
+  }
 
   private drainEvents(): void {
     const ev: EventRing = this.sim.events;
@@ -303,34 +418,35 @@ export class Game {
       this.ui.setRevive(offer.cost, 1 - flow.t / TUNING.REVIVE_OFFER_TIME);
     }
 
+    if (flow.state === 'running' && this.autoQuality.push(dtWall * 1000) && this.tier !== 'low') {
+      this.applyQuality(lowerTier(this.tier));
+    }
+
     const presentScale =
-      flow.state === 'hitstop'
+      flow.state === 'hitstop' || flow.state === 'paused'
         ? 0
         : flow.state === 'dying'
           ? TUNING.DEATH_SLOWMO
-          : flow.state === 'paused'
-            ? 0
-            : this.timeScale;
+          : this.timeScale;
     const pdt = dtWall * presentScale;
     this.presentT += pdt;
-    this.render(pdt);
-    this.hud.update(sim);
+    // 30 fps mode: the sim keeps its 120 Hz cadence, only presentation skips every other frame.
+    this.skipFrame = this.settings.fps30 ? !this.skipFrame : false;
+    if (!this.skipFrame) {
+      this.render(pdt, dtWall);
+      this.hud.update(sim);
+    }
     this.onFrame?.(dtWall * 1000);
   }
 
-  private render(pdt: number): void {
+  private render(pdt: number, dtWall: number): void {
     const sim = this.sim;
     const a = this.alpha;
     const s = sim.prevS + (sim.s - sim.prevS) * a;
     const x = sim.prevX + (sim.x - sim.prevX) * a;
     const y = sim.prevY + (sim.y - sim.prevY) * a;
     const lat = sim.stats.lateralSpeed || 1;
-    const k = 1 - Math.exp(-pdt * 3);
-    SHARED.uFogColor.value.lerp(this.targetFog, k);
-    SHARED.uLightColor.value.lerp(this.targetLight, k);
-    SHARED.uAmbient.value.lerp(this.targetAmbient, k);
-    this.rails.material.uniforms.uColor.value.lerp(this.targetRail, k);
-    (this.scene.background as THREE.Color).copy(SHARED.uFogColor.value);
+    this.blendBiome(1 - Math.exp(-dtWall * 1.5));
     SHARED.uTime.value = this.presentT;
 
     const cruise = sim.current.cruise;
@@ -338,13 +454,21 @@ export class Game {
       1,
       Math.max(0, (cruise - TUNING.SPEED_MIN) / (TUNING.SPEED_MAX - TUNING.SPEED_MIN)),
     );
-    const boost01 = sim.boosting ? 1 : 0;
+    const boost01 = sim.boosting && sim.alive ? 1 : 0;
+    const reduced = this.settings.reducedMotion;
     this.world.update(sim, s);
     this.rails.update(s);
     this.ship.update(x, y, sim.vx / lat, sim.vy / lat, boost01, pdt, sim.intangible, this.presentT);
     this.rig.update(x, y, speed01, boost01, this.ship.bank, pdt, this.presentT);
-    this.stars.follow(this.rig.camera);
+    this.sky.follow(this.rig.camera, x, y, this.presentT);
+    this.speedLines.update(s, speed01, boost01, reduced);
+    this.dust.update(s, speed01, boost01, reduced);
+    this.renderer.getDrawingBufferSize(tmpSize);
+    const fovRad = (this.rig.camera.fov * Math.PI) / 180;
+    this.particles.setTime(this.presentT, s, tmpSize.y / (2 * Math.tan(fovRad / 2)));
+    const warp = this.timeScale < 1 ? (1 - this.timeScale) / (1 - TUNING.FOCUS_TIME_SCALE) : 0;
+    this.feedback.update(dtWall, s, this.flow.state === 'running', warp);
     this.renderer.info.reset();
-    this.renderer.render(this.scene, this.rig.camera);
+    this.post.render(this.renderer, this.scene, this.rig.camera);
   }
 }

@@ -1,7 +1,44 @@
 import { describe, expect, it } from 'vitest';
 import { placeObstacle, setDronePath } from '../../src/core/gen/place.ts';
 import { ChunkData } from '../../src/core/sim/chunk.ts';
-import { pointClearance, sweptClearance } from '../../src/core/sim/collision.ts';
+import {
+  CLEARANCE,
+  pointClearance as pc,
+  SWEEP,
+  sweptClearance as sc,
+} from '../../src/core/sim/collision.ts';
+
+function pointClearance(
+  c: ChunkData,
+  i: number,
+  x: number,
+  y: number,
+  s: number,
+  r: number,
+  h: number,
+): number {
+  SWEEP.set([x, y, s, x, y, s, r, h]);
+  pc(c, i);
+  return CLEARANCE[0]!;
+}
+
+function sweptClearance(
+  c: ChunkData,
+  i: number,
+  x0: number,
+  y0: number,
+  s0: number,
+  x1: number,
+  y1: number,
+  s1: number,
+  r: number,
+  h: number,
+): number {
+  SWEEP.set([x0, y0, s0, x1, y1, s1, r, h]);
+  sc(c, i);
+  return CLEARANCE[0]!;
+}
+
 import { obstaclePos, posOut } from '../../src/core/sim/hazards.ts';
 import { obstacleIndex } from '../../src/data/registry.ts';
 

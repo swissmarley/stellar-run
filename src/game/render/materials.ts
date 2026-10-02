@@ -30,6 +30,7 @@ varying vec3 vNormal;
 varying vec3 vColor;
 varying float vGlow;
 varying float vFog;
+varying float vDepth;
 
 mat3 axisRot(vec3 axis, float a) {
   float s = sin(a), c = cos(a), oc = 1.0 - c;
@@ -60,6 +61,7 @@ void main() {
   vGlow = aGlow;
   vec4 mv = viewMatrix * world;
   vFog = smoothstep(uFogNear, uFogFar, -mv.z);
+  vDepth = -mv.z;
   gl_Position = projectionMatrix * mv;
 }
 `;
@@ -76,13 +78,21 @@ uniform float uRimStrength;
 uniform float uRimPower;
 uniform float uFlat;
 uniform float uOpacity;
+uniform float uNearCut;
 varying vec3 vWorld;
 varying vec3 vNormal;
 varying vec3 vColor;
 varying float vGlow;
 varying float vFog;
+varying float vDepth;
+
+// Interleaved gradient noise (Jimenez 2014): objects passing the lens dissolve instead of filling the screen.
+float dither(vec2 p) {
+  return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
+}
 
 void main() {
+  if (uNearCut > 0.0 && smoothstep(uNearCut, uNearCut + 2.5, vDepth) <= dither(gl_FragCoord.xy)) discard;
   vec3 n = normalize(vNormal);
   if (uFlat > 0.5) n = normalize(cross(dFdx(vWorld), dFdy(vWorld)));
   vec3 v = normalize(cameraPosition - vWorld);
@@ -107,6 +117,8 @@ export interface LitOptions {
   spin?: number;
   transparent?: boolean;
   opacity?: number;
+  /** Fragments closer than this to the camera dissolve (0 disables; the player ship uses 0). */
+  nearCut?: number;
 }
 
 export type LitMaterial = THREE.ShaderMaterial & {
@@ -141,6 +153,7 @@ export function litMaterial(o: LitOptions): LitMaterial {
       uFlat: { value: o.flat ? 1 : 0 },
       uSpin: { value: o.spin ?? 0 },
       uOpacity: { value: o.opacity ?? 1 },
+      uNearCut: { value: o.nearCut ?? 2.5 },
     },
     transparent: o.transparent ?? false,
   });

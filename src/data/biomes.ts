@@ -14,6 +14,7 @@ export const BIOMES: readonly BiomeDef[] = Object.freeze([
       rail: 0xe69f00,
       light: 0xffe2c0,
       ambient: 0x3a2c2c,
+      rock: 0x8a776a,
     },
     grading: {
       lift: [0.02, 0.01, 0.0],
@@ -37,6 +38,7 @@ export const BIOMES: readonly BiomeDef[] = Object.freeze([
       rail: 0x56b4e9,
       light: 0xcfe8ff,
       ambient: 0x1b2a40,
+      rock: 0x6c7a8c,
     },
     grading: {
       lift: [0.0, 0.01, 0.03],
@@ -60,6 +62,7 @@ export const BIOMES: readonly BiomeDef[] = Object.freeze([
       rail: 0x009e73,
       light: 0xe2fff2,
       ambient: 0x223029,
+      rock: 0x7f8580,
     },
     grading: {
       lift: [0.0, 0.015, 0.01],
@@ -83,6 +86,7 @@ export const BIOMES: readonly BiomeDef[] = Object.freeze([
       rail: 0xcc79a7,
       light: 0xffd9c7,
       ambient: 0x2a1530,
+      rock: 0x7a6680,
     },
     grading: {
       lift: [0.02, 0.0, 0.03],

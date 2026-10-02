@@ -5,13 +5,38 @@ import { COLS, cellX, cellY, ROWS } from '../gen/grid.ts';
 import { nearestCellIn } from '../gen/passability.ts';
 import type { ChunkSource } from '../gen/source.ts';
 import { ChunkData, KIND_WELL, OF_DESTROYED, OF_PASSED, OF_REMOVED, SHAPE_SPHERE } from './chunk.ts';
-import { lateralReach, pointClearance, sweptClearance } from './collision.ts';
+import { CLEARANCE, lateralReach, pointClearance, REACH, SWEEP, sweptClearance } from './collision.ts';
 import { EV, EventRing } from './events.ts';
-import { driftOut, wellDrift } from './hazards.ts';
+import { DRIFT, DRIFT_AT, wellDrift } from './hazards.ts';
 import { BTN_ABILITY, BTN_BOOST, BTN_FOCUS, BTN_REVIVE, type InputFrame } from './input-frame.ts';
 import { ABILITY_MAGNET, ABILITY_OVERDRIVE, ABILITY_PHASE, ABILITY_PULSE, ShipStats } from './ship-stats.ts';
 
 const SLOTS = 4;
+
+// Hot numeric state lives in one Float64Array: V8 stores typed-array doubles unboxed, while double object
+// fields are heap-number boxes that can allocate on writes in optimised code.
+const F_S = 0;
+const F_X = 1;
+const F_Y = 2;
+const F_PREV_S = 3;
+const F_PREV_X = 4;
+const F_PREV_Y = 5;
+const F_SPEED = 6;
+const F_VX = 7;
+const F_VY = 8;
+const F_ENERGY = 9;
+const F_BOOST_TIME = 10;
+const F_FOCUS = 11;
+const F_ABILITY_CHARGE = 12;
+const F_OVERDRIVE_TIME = 13;
+const F_PHASE_TIME = 14;
+const F_PHASE_EXTENSION = 15;
+const F_MAGNET_TIME = 16;
+const F_GHOST_TIME = 17;
+const F_COMBO_TIMER = 18;
+const F_MULTIPLIER = 19;
+const F_SCORE = 20;
+const F_COUNT = 21;
 const Q = TUNING.INPUT_QUANT;
 const NEAR = TUNING.NEAR_MISS_CLEARANCE;
 
@@ -25,41 +50,21 @@ export class RunSim {
   readonly stats = new ShipStats();
   private source: ChunkSource | null = null;
 
+  /** Unboxed storage for the hot numeric state (see accessors below). */
+  readonly f = new Float64Array(F_COUNT);
   seed = 0;
   tick = 0;
   /** Index of the chunk containing the ship. */
   chunkIndex = 0;
 
-  s = 0;
-  x = 0;
-  y = 0;
-  prevS = 0;
-  prevX = 0;
-  prevY = 0;
-  speed = 0;
-  vx = 0;
-  vy = 0;
-
   alive = true;
   deathObstacle = -1;
 
-  energy = 1;
-  boostTime = 0;
-  focus = 1;
   focusActive = false;
-  abilityCharge = 0;
-  overdriveTime = 0;
-  phaseTime = 0;
-  phaseExtension = 0;
-  magnetTime = 0;
-  ghostTime = 0;
 
   combo = 0;
-  comboTimer = 0;
-  multiplier = 1;
   maxCombo = 0;
 
-  score = 0;
   shards = 0;
   nearMisses = 0;
   perfects = 0;
@@ -72,6 +77,177 @@ export class RunSim {
 
   constructor() {
     for (let i = 0; i < SLOTS; i++) this.chunks.push(new ChunkData());
+    this.f[F_ENERGY] = 1;
+    this.f[F_FOCUS] = 1;
+    this.f[F_MULTIPLIER] = 1;
+  }
+
+  get s(): number {
+    return this.f[F_S]!;
+  }
+
+  set s(v: number) {
+    this.f[F_S] = v;
+  }
+
+  get x(): number {
+    return this.f[F_X]!;
+  }
+
+  set x(v: number) {
+    this.f[F_X] = v;
+  }
+
+  get y(): number {
+    return this.f[F_Y]!;
+  }
+
+  set y(v: number) {
+    this.f[F_Y] = v;
+  }
+
+  get prevS(): number {
+    return this.f[F_PREV_S]!;
+  }
+
+  set prevS(v: number) {
+    this.f[F_PREV_S] = v;
+  }
+
+  get prevX(): number {
+    return this.f[F_PREV_X]!;
+  }
+
+  set prevX(v: number) {
+    this.f[F_PREV_X] = v;
+  }
+
+  get prevY(): number {
+    return this.f[F_PREV_Y]!;
+  }
+
+  set prevY(v: number) {
+    this.f[F_PREV_Y] = v;
+  }
+
+  get speed(): number {
+    return this.f[F_SPEED]!;
+  }
+
+  set speed(v: number) {
+    this.f[F_SPEED] = v;
+  }
+
+  get vx(): number {
+    return this.f[F_VX]!;
+  }
+
+  set vx(v: number) {
+    this.f[F_VX] = v;
+  }
+
+  get vy(): number {
+    return this.f[F_VY]!;
+  }
+
+  set vy(v: number) {
+    this.f[F_VY] = v;
+  }
+
+  get energy(): number {
+    return this.f[F_ENERGY]!;
+  }
+
+  set energy(v: number) {
+    this.f[F_ENERGY] = v;
+  }
+
+  get boostTime(): number {
+    return this.f[F_BOOST_TIME]!;
+  }
+
+  set boostTime(v: number) {
+    this.f[F_BOOST_TIME] = v;
+  }
+
+  get focus(): number {
+    return this.f[F_FOCUS]!;
+  }
+
+  set focus(v: number) {
+    this.f[F_FOCUS] = v;
+  }
+
+  get abilityCharge(): number {
+    return this.f[F_ABILITY_CHARGE]!;
+  }
+
+  set abilityCharge(v: number) {
+    this.f[F_ABILITY_CHARGE] = v;
+  }
+
+  get overdriveTime(): number {
+    return this.f[F_OVERDRIVE_TIME]!;
+  }
+
+  set overdriveTime(v: number) {
+    this.f[F_OVERDRIVE_TIME] = v;
+  }
+
+  get phaseTime(): number {
+    return this.f[F_PHASE_TIME]!;
+  }
+
+  set phaseTime(v: number) {
+    this.f[F_PHASE_TIME] = v;
+  }
+
+  get phaseExtension(): number {
+    return this.f[F_PHASE_EXTENSION]!;
+  }
+
+  set phaseExtension(v: number) {
+    this.f[F_PHASE_EXTENSION] = v;
+  }
+
+  get magnetTime(): number {
+    return this.f[F_MAGNET_TIME]!;
+  }
+
+  set magnetTime(v: number) {
+    this.f[F_MAGNET_TIME] = v;
+  }
+
+  get ghostTime(): number {
+    return this.f[F_GHOST_TIME]!;
+  }
+
+  set ghostTime(v: number) {
+    this.f[F_GHOST_TIME] = v;
+  }
+
+  get comboTimer(): number {
+    return this.f[F_COMBO_TIMER]!;
+  }
+
+  set comboTimer(v: number) {
+    this.f[F_COMBO_TIMER] = v;
+  }
+
+  get multiplier(): number {
+    return this.f[F_MULTIPLIER]!;
+  }
+
+  set multiplier(v: number) {
+    this.f[F_MULTIPLIER] = v;
+  }
+
+  get score(): number {
+    return this.f[F_SCORE]!;
+  }
+
+  set score(v: number) {
+    this.f[F_SCORE] = v;
   }
 
   /** Starts a new run. Reuses all buffers; cost is dominated by generating the first chunks. */
@@ -251,9 +427,12 @@ export class RunSim {
       cx *= inv;
       cy *= inv;
     }
-    wellDrift(cur, this.x, this.y, this.s);
-    this.vx = cx * st.lateralSpeed + driftOut.x * this.speed;
-    this.vy = cy * st.lateralSpeed + driftOut.y * this.speed;
+    DRIFT_AT[0] = this.x;
+    DRIFT_AT[1] = this.y;
+    DRIFT_AT[2] = this.s;
+    wellDrift(cur);
+    this.vx = cx * st.lateralSpeed + DRIFT[0]! * this.speed;
+    this.vy = cy * st.lateralSpeed + DRIFT[1]! * this.speed;
 
     const x0 = this.x;
     const y0 = this.y;
@@ -266,8 +445,16 @@ export class RunSim {
     else if (y1 < -SHIP_Y_LIMIT) y1 = -SHIP_Y_LIMIT;
     const s1 = s0 + this.speed * DT;
 
-    // Collisions and near-miss tracking.
+    // Collisions and near-miss tracking. The sweep is the same for every obstacle: set it once.
     const tangible = this.phaseTime <= 0 && this.ghostTime <= 0;
+    SWEEP[0] = x0;
+    SWEEP[1] = y0;
+    SWEEP[2] = s0;
+    SWEEP[3] = x1;
+    SWEEP[4] = y1;
+    SWEEP[5] = s1;
+    SWEEP[6] = st.hitRadius;
+    SWEEP[7] = st.hitHalfLength;
     let hit = -1;
     let hitChunk: ChunkData | null = null;
     for (let k = -1; k <= 1 && hit < 0; k++) {
@@ -386,11 +573,14 @@ export class RunSim {
         continue;
       }
       if (!tangible) continue;
-      const reach = lateralReach(c, i) + r + NEAR;
+      lateralReach(c, i);
+      const rx = REACH[0]! + r + NEAR;
+      const ry = REACH[1]! + r + NEAR;
       const ox = c.obsX[i]!;
       const oy = c.obsY[i]!;
-      if (ox - reach > xh || ox + reach < xl || oy - reach > yh || oy + reach < yl) continue;
-      const clear = sweptClearance(c, i, x0, y0, s0, x1, y1, s1, r, h);
+      if (ox - rx > xh || ox + rx < xl || oy - ry > yh || oy + ry < yl) continue;
+      sweptClearance(c, i);
+      const clear = CLEARANCE[0]!;
       if (clear < c.obsMinClear[i]!) c.obsMinClear[i] = clear;
       if (clear < 0) return i;
     }
@@ -498,6 +688,11 @@ export class RunSim {
 
   private overlappingAny(): boolean {
     const st = this.stats;
+    SWEEP[0] = this.x;
+    SWEEP[1] = this.y;
+    SWEEP[2] = this.s;
+    SWEEP[6] = st.hitRadius;
+    SWEEP[7] = st.hitHalfLength;
     for (let k = -1; k <= 1; k++) {
       const c = this.chunk(this.chunkIndex + k);
       if (!c) continue;
@@ -506,7 +701,8 @@ export class RunSim {
         const ext = c.obsShape[i] === SHAPE_SPHERE ? c.obsR[i]! : c.obsHS[i]!;
         if (c.obsS[i]! - ext - st.hitHalfLength > this.s || c.obsS[i]! + ext + st.hitHalfLength < this.s)
           continue;
-        if (pointClearance(c, i, this.x, this.y, this.s, st.hitRadius, st.hitHalfLength) < 0) return true;
+        pointClearance(c, i);
+        if (CLEARANCE[0]! < 0) return true;
       }
     }
     return false;

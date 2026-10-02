@@ -38,35 +38,3 @@ export class Rails {
     this.root.position.z = shipS % RAIL_STEP;
   }
 }
-
-/** Distant star field that rides with the camera (infinitely far). */
-export class Stars {
-  readonly points: THREE.Points;
-
-  constructor(count = 900) {
-    const pos = new Float32Array(count * 3);
-    let seed = 12345;
-    const rnd = (): number => {
-      seed = (seed * 1664525 + 1013904223) >>> 0;
-      return seed / 4294967296;
-    };
-    for (let i = 0; i < count; i++) {
-      const u = rnd() * 2 - 1;
-      const th = rnd() * Math.PI * 2;
-      const r = Math.sqrt(1 - u * u);
-      pos[i * 3] = r * Math.cos(th) * 450;
-      pos[i * 3 + 1] = u * 450;
-      pos[i * 3 + 2] = r * Math.sin(th) * 450;
-    }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    const m = new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: false, fog: false });
-    this.points = new THREE.Points(g, m);
-    this.points.frustumCulled = false;
-    this.points.renderOrder = -10;
-  }
-
-  follow(camera: THREE.Camera): void {
-    this.points.position.copy(camera.position);
-  }
-}

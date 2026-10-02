@@ -171,6 +171,8 @@ export interface BiomeDef {
     readonly rail: number;
     readonly light: number;
     readonly ambient: number;
+    /** Body tint of rocks and debris in this biome. */
+    readonly rock: number;
   };
   /** Colour grading applied in the final pass (lift/gamma/gain are per-channel). */
   readonly grading: {

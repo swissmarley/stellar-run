@@ -2,7 +2,7 @@ import { DT, TUNING } from '../../data/tuning.ts';
 import { Rng } from '../det/rng.ts';
 import { COLS, cellX, cellY, colOf, ROWS, rowOf } from '../gen/grid.ts';
 import type { ChunkData } from '../sim/chunk.ts';
-import { driftOut, wellDrift } from '../sim/hazards.ts';
+import { DRIFT, DRIFT_AT, wellDrift } from '../sim/hazards.ts';
 import { BTN_ABILITY, BTN_BOOST, BTN_FOCUS, type InputFrame } from '../sim/input-frame.ts';
 import type { RunSim } from '../sim/run-sim.ts';
 
@@ -115,9 +115,12 @@ const TARGET = { tx: 0, ty: 0 };
 /** Velocity command that reaches (tx, ty) as fast as possible, cancelling the drift by `cancel` (0..1). */
 export function steerToward(sim: RunSim, tx: number, ty: number, cancel: number, out: InputFrame): void {
   const lat = sim.stats.lateralSpeed;
-  wellDrift(sim.current, sim.x, sim.y, sim.s);
-  const gvx = driftOut.x * sim.speed * cancel;
-  const gvy = driftOut.y * sim.speed * cancel;
+  DRIFT_AT[0] = sim.x;
+  DRIFT_AT[1] = sim.y;
+  DRIFT_AT[2] = sim.s;
+  wellDrift(sim.current);
+  const gvx = DRIFT[0]! * sim.speed * cancel;
+  const gvy = DRIFT[1]! * sim.speed * cancel;
   const avail = lat - Math.sqrt(gvx * gvx + gvy * gvy);
   let dvx = (tx - sim.x) / DT;
   let dvy = (ty - sim.y) / DT;

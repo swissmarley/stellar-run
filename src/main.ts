@@ -2,10 +2,13 @@ import './styles.css';
 import { ProceduralSource } from './core/gen/generator.ts';
 import { generationHash } from './core/gen/golden.ts';
 import type { RunSim } from './core/sim/run-sim.ts';
+import { AudioEngine } from './game/audio/audio-engine.ts';
 import { Game } from './game/game.ts';
 import { Hud } from './game/hud/hud.ts';
 import { defaultInputSettings, InputRouter } from './game/input/input-router.ts';
+import { detectTier } from './game/render/quality.ts';
 import { createRenderer } from './game/render/renderer.ts';
+import { HapticsService } from './services/haptics.ts';
 import { Ui } from './ui/ui.ts';
 
 function randomSeed(): number {
@@ -20,7 +23,7 @@ function boot(): void {
   const hudRoot = document.getElementById('hud-root')!;
   const uiRoot = document.getElementById('ui-root')!;
 
-  const renderer = createRenderer({ canvas, antialias: true, pixelRatioCap: 2 });
+  const renderer = createRenderer({ canvas, antialias: false, pixelRatioCap: 2 });
   const input = new InputRouter(canvas, defaultInputSettings());
   const hud = new Hud();
   hudRoot.append(hud.root);
@@ -67,6 +70,18 @@ function boot(): void {
     nextRun: () => ({ shipIndex: 0, upgrades: {}, seed: randomSeed() }),
   });
 
+  hudRoot.append(game.popups.root);
+  const haptics = new HapticsService();
+  const audio = new AudioEngine();
+  game.feedback.haptics = haptics;
+  game.feedback.audio = audio;
+  const unlock = (): void => audio.unlock();
+  window.addEventListener('pointerdown', unlock, { capture: true, passive: true });
+  window.addEventListener('keydown', unlock, { capture: true, passive: true });
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  game.applySettings({ ...game.settings, reducedMotion: reduced });
+  game.applyQuality(detectTier());
+
   input.onPause = () => {
     if (game.flow.state === 'running') game.pause();
     else if (game.flow.state === 'paused') game.resume();
@@ -85,7 +100,10 @@ function boot(): void {
   resize();
 
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden && game.flow.state === 'running') game.pause();
+    if (document.hidden) {
+      if (game.flow.state === 'running') game.pause();
+      audio.suspend();
+    } else audio.resume();
   });
 
   ui.show('menu');
