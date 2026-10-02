@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!--CSP-->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#07060d" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="description" content="STELLAR RUN: an open-source, one-handed endless space runner. Thread asteroid belts, ion storms, dead stations and singularities." />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Stellar Run" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <title>STELLAR RUN</title>
+  </head>
+  <body>
+    <main id="app">
+      <canvas id="game" aria-label="Game view"></canvas>
+      <div id="hud-root"></div>
+      <div id="ui-root"></div>
+      <div id="boot" class="boot" role="status">STELLAR RUN</div>
+    </main>
+    <noscript><p class="noscript">STELLAR RUN needs JavaScript and WebGL 2.</p></noscript>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

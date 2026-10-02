@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="STELLAR RUN"><title>STELLAR RUN</title>
+<defs><radialGradient id="g" cx="50%" cy="50%" r="62%"><stop offset="0" stop-color="#2a1246"/><stop offset="1" stop-color="#07060d"/></radialGradient></defs>
+<rect width="512" height="512" rx="112" fill="url(#g)"/>
+<circle cx="256" cy="256" r="177" fill="none" stroke="#56b4e9" stroke-opacity=".9" stroke-width="15"/>
+<path d="M256 92 L358 369 L256 317 L154 369 Z" fill="#f2f6ff"/>
+<path d="M225 338 L287 338 L256 440 Z" fill="#e69f00"/>
+<circle cx="399" cy="133" r="11" fill="#f0e442"/><circle cx="102" cy="358" r="8" fill="#cc79a7"/>
+</svg>

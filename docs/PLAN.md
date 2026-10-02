@@ -209,8 +209,8 @@ The project folder `/Users/nakya/Documents/ClaudeProjects/Stellar-Run` is empty 
 5. TypeScript 7 tooling maturity. Fall back to pinning 5.9 and record it in DECISIONS.md.
 
 ## Milestone checklist
-- [ ] M0 Setup
-- [ ] M1 Core loop
+- [x] M0 Setup
+- [x] M1 Core loop
 - [ ] M2 Procgen + director
 - [ ] M3 Juice
 - [ ] M4 Meta
