@@ -37,9 +37,22 @@ export class Ui {
   private readonly reviveCost: HTMLElement;
   private readonly reviveBar: HTMLElement;
   readonly menuExtra: HTMLElement;
+  /** "Update ready" toast; the app decides when it may be shown (never mid-run). */
+  readonly updateToast: HTMLElement;
+  readonly updateReload: HTMLButtonElement;
+  readonly updateLater: HTMLButtonElement;
 
   constructor(root: HTMLElement, actions: UiActions) {
     this.root = root;
+    this.updateReload = h('button', { class: 'btn btn-primary btn-small', type: 'button' }, 'Reload');
+    this.updateLater = h('button', { class: 'btn btn-ghost btn-small', type: 'button' }, 'Later');
+    this.updateToast = h(
+      'div',
+      { class: 'update-toast hidden', role: 'status', 'aria-live': 'polite' },
+      h('span', null, 'A new version of STELLAR RUN is ready.'),
+      h('div', { class: 'update-actions' }, this.updateLater, this.updateReload),
+    );
+    root.append(this.updateToast);
     this.bestEl = h('div', { class: 'menu-best' });
     this.menuExtra = h('nav', { class: 'menu-nav' });
     this.add(
@@ -170,6 +183,10 @@ export class Ui {
       // Move focus for keyboard/mouse users; on touch screens a focus ring on a fresh screen is just noise.
       if (matchMedia('(pointer: fine)').matches) first?.focus({ preventScroll: true });
     }
+  }
+
+  setUpdateToast(visible: boolean): void {
+    this.updateToast.classList.toggle('hidden', !visible);
   }
 
   setBest(best: number): void {

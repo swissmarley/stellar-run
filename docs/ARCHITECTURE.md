@@ -239,6 +239,12 @@ is one tick (≤ 8.3 ms) plus one or two display frames.
   something.
 - The first launch shows a privacy notice. Data can be exported or deleted from Settings.
 
+**Updates.** The service worker serves cache-first, for offline play. A new deploy installs in the background
+and waits.
+- **Prompt:** `UpdateService` shows an "update ready" toast, only outside active play.
+- **Reload:** this activates the new worker and reloads into it.
+- **Cache cleanup:** old caches are deleted only when the new version takes over.
+
 ## 11. Verification map
 
 | What | Where |
@@ -259,5 +265,6 @@ is one tick (≤ 8.3 ms) plus one or two display frames.
 | Audio data, mixes, recipes (mock context) | `tests/unit/audio.test.ts` |
 | Restart < 2 s, no errors/CSP violations/foreign requests, drag steering, HUD layout, cross-engine determinism, golden hash through a real worker, zero main-thread fallbacks in play | `tests/e2e/smoke.spec.ts` |
 | Persistence across reload, menus, text scale, pop-up pool, offline play | `tests/e2e/meta.spec.ts` |
+| Update prompt: detected in background, never mid-run, Reload activates new version, Later dismisses | `tests/e2e/update.spec.ts` |
 | 100 seeded runs (perfect + human bots), certificates, softlocks, crashes | `npm run bot` |
 | Frame/work time, draw calls, heap, GC traces, bundle size | `npm run bench` → `docs/PERF.md` |

@@ -39,6 +39,7 @@ import { LocalLeaderboard, MockOnlineLeaderboard } from './services/leaderboard.
 import { NoAds, NoIap } from './services/monetisation.ts';
 import { defaultSettings, SETTINGS_VERSION, type Settings, sanitizeSettings } from './services/settings.ts';
 import { openStorage } from './services/storage.ts';
+import { UpdateService } from './services/updates.ts';
 import { h } from './ui/dom.ts';
 import {
   hangarScreen,
@@ -70,6 +71,8 @@ export class App {
   readonly hud: Hud;
   readonly input: InputRouter;
   readonly haptics = new HapticsService();
+  readonly updates = new UpdateService();
+  private updateDismissed = false;
   readonly audio = new AudioEngine();
   readonly consent = new ConsentService();
   readonly ads = new NoAds();
@@ -209,6 +212,7 @@ export class App {
         this.save();
       } else {
         this.audio.resume();
+        this.updates.check();
       }
     });
     window.addEventListener('pagehide', () => this.save());
@@ -216,6 +220,16 @@ export class App {
 
     this.applySettings();
     this.game.warmup();
+    this.updates.onReady = () => this.refreshUpdateToast();
+    this.ui.updateReload.addEventListener('click', () => {
+      this.save();
+      this.updates.apply();
+    });
+    this.ui.updateLater.addEventListener('click', () => {
+      this.updateDismissed = true;
+      this.refreshUpdateToast();
+    });
+    if (import.meta.env.PROD) void this.updates.register('./sw.js');
     this.ui.setBest(this.profile.best.score);
     this.ui.show('menu');
     if (!this.settings.privacy.noticeSeen) this.showNotice();
@@ -240,6 +254,11 @@ export class App {
       kill: () => g.sim.debugKill(),
       genHash: (seed: number, n: number) => generationHash(seed, n),
       workerStats: () => (this.workerSource ? { ...this.workerSource.stats } : null),
+      updateStatus: () => ({
+        ready: this.updates.ready,
+        toast: !this.ui.updateToast.classList.contains('hidden'),
+      }),
+      checkForUpdate: () => this.updates.check(true),
       genHashViaWorker: (seed: number, n: number) => generationHashViaWorker(seed, n),
       benchStart: (o: BenchOptions) => benchStart(g, o),
       benchMeasure: (seconds: number) => benchMeasure(seconds),
@@ -267,7 +286,15 @@ export class App {
     this.ui.setBest(this.profile.best.score);
   }
 
+  /** The update prompt only appears outside active play, so a reload can never cost the player a run. */
+  private refreshUpdateToast(): void {
+    const st = this.game.flow.state;
+    const calm = st === 'menu' || st === 'results' || st === 'paused';
+    this.ui.setUpdateToast(this.updates.ready && !this.updateDismissed && calm);
+  }
+
   private onFlow(state: string): void {
+    this.refreshUpdateToast();
     if (state === 'running') void this.acquireWakeLock();
     else this.releaseWakeLock();
   }

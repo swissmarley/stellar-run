@@ -937,3 +937,35 @@ input[type="range"]:focus-visible,
   padding: 0.15rem 0.4rem;
   border-radius: 0.4rem;
 }
+
+/* ---------- Update prompt ---------- */
+.update-toast {
+  pointer-events: auto;
+  position: absolute;
+  z-index: 5;
+  left: calc(var(--safe-l) + 0.75rem);
+  right: calc(var(--safe-r) + 0.75rem);
+  top: calc(var(--safe-t) + 0.75rem);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: 1rem;
+  background: var(--panel);
+  border: 1px solid var(--accent);
+  box-shadow: 0 0.4rem 1.5rem rgba(0, 0, 0, 0.5);
+  font-size: 0.9rem;
+}
+
+.update-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex: none;
+}
+
+.btn-small {
+  min-height: 2.75rem;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.9rem;
+}

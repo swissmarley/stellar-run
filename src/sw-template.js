@@ -3,13 +3,15 @@ const VERSION = __VERSION__;
 const PRECACHE = __PRECACHE__;
 const CACHE = `stellar-run-${VERSION}`;
 
+// A new version precaches itself and then WAITS: the page shows an "update ready" prompt and activates it with
+// a SKIP_WAITING message followed by a reload, so a running page never mixes old and new assets.
+// (A first install has no previous worker and activates immediately.)
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches
-      .open(CACHE)
-      .then((cache) => cache.addAll(PRECACHE))
-      .then(() => self.skipWaiting()),
-  );
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(PRECACHE)));
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
