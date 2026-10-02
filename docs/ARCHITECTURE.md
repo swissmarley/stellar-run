@@ -92,6 +92,21 @@ passable at every lower speed. v_cert includes boost and the fastest ship, and t
   evaluated incrementally, slice range by slice range. If repair fails, the chunk is regenerated (up to 4
   attempts), and finally replaced by the biome's empty fallback.
 
+**Where generation runs.** In the browser, chunk building happens in a **Web Worker**
+(`src/game/gen/gen-worker.ts`).
+- **At the crossing tick, main thread:** the sim requests chunk N+2. The director decides its difficulty there
+  (it is stateful) and every input is captured: seed, index, start, the previous chunk's exit set and cruise
+  speed.
+- **In the worker:** the pure `ProceduralSource.build` runs on those inputs, and the packed chunk returns in a
+  pooled transferable buffer.
+- **Deadline:** the chunk is first needed one crossing later. If the result is late, `WorkerSource.ensure`
+  builds it synchronously from the same inputs, so the result is bit-identical.
+- **Evidence:** worker timing provably cannot change a run. `tests/unit/worker-gen.test.ts` covers on-time,
+  never, random-late, out-of-order and stale-after-restart delivery. The e2e suite checks the golden hash
+  through a real worker.
+- **Synchronous paths:** Node tools and tests use the synchronous source directly. The first three chunks of a
+  run are built synchronously, to keep restart instant.
+
 Measured on 100 + 100 runs:
 - 0.02% fallback chunks;
 - about 1 repair removal per chunk;
@@ -237,11 +252,12 @@ is one tick (≤ 8.3 ms) plus one or two display frames.
 | Perfect bot per ship + oracle; human bot dies and revives | `tests/unit/bot.test.ts` |
 | Save round-trip, corruption, torn writes, future version, migration, sanitising; economy; missions | `tests/unit/save.test.ts` |
 | Pools (chunks, events, particles, world view) | `tests/unit/pools.test.ts` |
+| Worker generation is timing-independent (on-time, never, late, out-of-order, stale); chunk codec round-trip | `tests/unit/worker-gen.test.ts` |
 | GC behaviour of the tick path | `tests/unit/perf-alloc.test.ts` |
 | Flow state machine has no softlocks | `tests/unit/flow.test.ts` |
 | Core purity rules | `tests/unit/architecture.test.ts` |
 | Audio data, mixes, recipes (mock context) | `tests/unit/audio.test.ts` |
-| Restart < 2 s, no errors/CSP violations/foreign requests, drag steering, HUD layout, cross-engine determinism | `tests/e2e/smoke.spec.ts` |
+| Restart < 2 s, no errors/CSP violations/foreign requests, drag steering, HUD layout, cross-engine determinism, golden hash through a real worker, zero main-thread fallbacks in play | `tests/e2e/smoke.spec.ts` |
 | Persistence across reload, menus, text scale, pop-up pool, offline play | `tests/e2e/meta.spec.ts` |
 | 100 seeded runs (perfect + human bots), certificates, softlocks, crashes | `npm run bot` |
 | Frame/work time, draw calls, heap, GC traces, bundle size | `npm run bench` → `docs/PERF.md` |

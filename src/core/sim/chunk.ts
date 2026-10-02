@@ -48,6 +48,8 @@ export class ChunkData {
   readonly entry = new Int32Array(ROWS);
   readonly exit = new Int32Array(ROWS);
   certified = false;
+  /** True while the chunk is being generated asynchronously; the sim and views must not read it yet. */
+  pending = false;
   repairs = 0;
   attempts = 0;
   fallback = false;
@@ -104,6 +106,7 @@ export class ChunkData {
     this.sliceCount = 0;
     this.sliceLen = 0;
     this.certified = false;
+    this.pending = false;
     this.repairs = 0;
     this.attempts = 0;
     this.fallback = false;

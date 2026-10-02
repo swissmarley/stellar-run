@@ -294,7 +294,7 @@ export class RunSim {
     this.nextMilestone = TUNING.DISTANCE_MILESTONE;
     for (const c of this.chunks) c.reset(-1, 0);
     source.beginRun(this.seed);
-    for (let i = 0; i <= TUNING.CHUNKS_AHEAD; i++) this.generateChunk(i);
+    for (let i = 0; i <= TUNING.CHUNKS_AHEAD; i++) this.generateChunk(i, false);
     const c0 = this.chunk(0)!;
     this.speed = c0.cruise * st.speedFactor * TUNING.START_SPEED_FRACTION;
     if (this.speed > c0.vCert) this.speed = c0.vCert;
@@ -321,12 +321,20 @@ export class RunSim {
     return this.phaseTime > 0 || this.ghostTime > 0;
   }
 
-  private generateChunk(index: number): void {
+  private generateChunk(index: number, async: boolean): void {
     const out = this.chunks[index & (SLOTS - 1)]!;
     const prev = this.chunk(index - 1);
     const startS = index * TUNING.CHUNK_LENGTH;
     out.reset(index, startS);
-    this.source!.generate(index, startS, prev, out);
+    const src = this.source!;
+    if (async && src.request) src.request(index, startS, prev, out);
+    else src.generate(index, startS, prev, out);
+  }
+
+  /** Guarantees chunk `index` is fully generated (completing an asynchronous build synchronously if late). */
+  private ensureReady(index: number): void {
+    const c = this.chunk(index);
+    if (c?.pending) this.source!.ensure?.(c);
   }
 
   step(inp: InputFrame): void {
@@ -519,7 +527,10 @@ export class RunSim {
       this.source!.onChunkCleared(cur, this.chunkNearMisses);
       this.chunkNearMisses = 0;
       this.chunkIndex++;
-      this.generateChunk(this.chunkIndex + TUNING.CHUNKS_AHEAD);
+      // The chunk now ahead was requested one crossing ago (>= 200 m of travel); it must be complete before
+      // the sim touches it or uses its exit set as the next chunk's entry.
+      for (let k = 1; k < TUNING.CHUNKS_AHEAD; k++) this.ensureReady(this.chunkIndex + k);
+      this.generateChunk(this.chunkIndex + TUNING.CHUNKS_AHEAD, true);
       const nc = this.current;
       ev.push(EV.CHUNK_ENTER, nc.index, nc.biome, nc.difficulty);
       if (nc.biome !== cur.biome) ev.push(EV.BIOME_CHANGE, nc.biome);

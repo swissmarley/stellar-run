@@ -126,3 +126,42 @@ test('procedural generation is bit-identical in this browser engine (cross-engin
     expect(got, `seed ${seed}`).toBe(want);
   }
 });
+
+type WorkerApi = {
+  __stellar: {
+    genHashViaWorker(
+      seed: number,
+      n: number,
+    ): Promise<{ hash: number; fromWorker: number; syncFallbacks: number }>;
+    workerStats(): { requests: number; fromWorker: number; syncFallbacks: number; stale: number } | null;
+    benchStart(o: { tier: string; fps30: boolean; seed: number; warmup: number }): Promise<void>;
+    benchMeasure(s: number): Promise<unknown>;
+  };
+};
+
+test('chunks built in a Web Worker are bit-identical to the Node golden hashes', async ({ page }) => {
+  await page.goto('./');
+  for (const [seed, want] of Object.entries(GOLDEN_GENERATION)) {
+    const r = await page.evaluate(
+      (sd) => (window as unknown as WorkerApi).__stellar.genHashViaWorker(sd, 200),
+      Number(seed),
+    );
+    expect(r.hash, `seed ${seed}`).toBe(want);
+    expect(r.fromWorker).toBe(200);
+    expect(r.syncFallbacks).toBe(0);
+  }
+});
+
+test('during play every chunk ahead is generated off the main thread', async ({ page }) => {
+  await page.goto('./');
+  await page.getByRole('button', { name: "Let's fly" }).click();
+  await page.evaluate(() =>
+    (window as unknown as WorkerApi).__stellar.benchStart({ tier: 'low', fps30: false, seed: 3, warmup: 20 }),
+  );
+  const stats = await page.evaluate(() => (window as unknown as WorkerApi).__stellar.workerStats());
+  await page.evaluate(() => (window as unknown as WorkerApi).__stellar.benchMeasure(0.1));
+  expect(stats).not.toBeNull();
+  expect(stats!.requests).toBeGreaterThanOrEqual(2);
+  expect(stats!.syncFallbacks).toBe(0);
+  expect(stats!.fromWorker).toBeGreaterThanOrEqual(stats!.requests - 1);
+});

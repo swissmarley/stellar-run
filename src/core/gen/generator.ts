@@ -85,21 +85,51 @@ export class ProceduralSource implements ChunkSource {
     this.director.beginRun();
   }
 
+  /** Sets the run seed without touching the director (used by the generation worker). */
+  setSeed(seed: number): void {
+    this.seed = seed >>> 0;
+  }
+
+  get runSeed(): number {
+    return this.seed;
+  }
+
   generate(index: number, startS: number, prev: ChunkData | null, out: ChunkData): void {
+    const d = this.decide(index, startS);
+    this.build(index, startS, prev ? prev.exit : null, prev ? prev.cruise : -1, d, out);
+  }
+
+  /**
+   * Difficulty of chunk `index`. Stateful (the director rate-limits against the previous chunk), so it must
+   * be called exactly once per chunk, in order, at the tick the chunk is requested.
+   */
+  decide(index: number, startS: number): number {
+    if (this.fixedDifficulty >= 0) return this.fixedDifficulty;
+    if (index < TUNING.INTRO_CHUNKS) return this.director.curve.minD;
+    return this.director.difficultyFor(startS);
+  }
+
+  /**
+   * Builds and certifies chunk `index` from explicit inputs. Pure with respect to the director: the same
+   * (seed, index, startS, prevExit, prevCruise, d) always yields a bit-identical chunk, which is what lets
+   * generation run in a worker. `prevExit` null = first chunk (spawn cell); prevCruise < 0 = none.
+   */
+  build(
+    index: number,
+    startS: number,
+    prevExit: Int32Array | null,
+    prevCruise: number,
+    d: number,
+    out: ChunkData,
+  ): void {
     const intro = index < TUNING.INTRO_CHUNKS;
-    const curve = this.director.curve;
-    const d =
-      this.fixedDifficulty >= 0
-        ? this.fixedDifficulty
-        : intro
-          ? curve.minD
-          : this.director.difficultyFor(startS);
+    out.reset(index, startS);
     out.difficulty = d;
     out.cruise = cruiseFor(d);
-    out.vCert = certifiedSpeed(out.cruise, prev ? prev.cruise : out.cruise);
+    out.vCert = certifiedSpeed(out.cruise, prevCruise >= 0 ? prevCruise : out.cruise);
     out.margin = lerp(TUNING.MARGIN_EASY, TUNING.MARGIN_HARD, d);
     out.biome = biomeFor(index);
-    if (prev) out.entry.set(prev.exit);
+    if (prevExit) out.entry.set(prevExit);
     else {
       fillRows(out.entry, 0, 0);
       out.entry[SPAWN_ROW] = 1 << SPAWN_COL;

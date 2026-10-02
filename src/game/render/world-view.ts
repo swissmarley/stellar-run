@@ -288,7 +288,7 @@ export class WorldView {
     for (let k = 0; k < 4; k++) {
       const c = sim.chunks[k]!;
       const v = this.slots[k]!;
-      if (c.index < 0) {
+      if (c.index < 0 || c.pending) {
         v.group.visible = false;
         continue;
       }

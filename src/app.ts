@@ -1,6 +1,7 @@
 import { type BenchOptions, benchMeasure, benchStart } from './bench.ts';
 import { ProceduralSource } from './core/gen/generator.ts';
 import { generationHash } from './core/gen/golden.ts';
+import type { ChunkSource } from './core/gen/source.ts';
 import {
   buyCosmetic,
   buyShip,
@@ -25,6 +26,8 @@ import { SHIP_INDEX } from './data/registry.ts';
 import { SHIPS } from './data/ships.ts';
 import { AudioEngine } from './game/audio/audio-engine.ts';
 import { Game } from './game/game.ts';
+import { generationHashViaWorker } from './game/gen/worker-golden.ts';
+import { createGenWorker, WorkerSource } from './game/gen/worker-source.ts';
 import { Hud } from './game/hud/hud.ts';
 import { InputRouter } from './game/input/input-router.ts';
 import { SHARED } from './game/render/materials.ts';
@@ -71,7 +74,10 @@ export class App {
   readonly consent = new ConsentService();
   readonly ads = new NoAds();
   readonly iap = new NoIap();
-  readonly source = new ProceduralSource();
+  /** Synchronous generator: owns the director; the worker source delegates decisions and fallbacks to it. */
+  readonly gen = new ProceduralSource();
+  readonly source: ChunkSource;
+  readonly workerSource: WorkerSource | null;
   private readonly profileStore: SlotStore<Profile>;
   private readonly settingsStore: SlotStore<Settings>;
   private readonly local: LocalLeaderboard;
@@ -90,6 +96,11 @@ export class App {
     const canvas = document.getElementById('game') as HTMLCanvasElement;
     const hudRoot = document.getElementById('hud-root')!;
     const uiRoot = document.getElementById('ui-root')!;
+
+    // `?gen=sync` keeps generation on the main thread (A/B benchmarking).
+    const transport = new URLSearchParams(location.search).get('gen') === 'sync' ? null : createGenWorker();
+    this.workerSource = transport ? new WorkerSource(this.gen, transport) : null;
+    this.source = this.workerSource ?? this.gen;
 
     const storage = openStorage();
     this.persistent = storage.persistent;
@@ -112,7 +123,7 @@ export class App {
     this.profile = this.profileStore.load().value;
     this.settings = this.settingsStore.load().value;
     this.local = new LocalLeaderboard(() => this.profile);
-    this.source.director.restore(this.profile.director);
+    this.gen.director.restore(this.profile.director);
     ensureMissions(this.profile, dayKey(Date.now()));
 
     const renderer = createRenderer({ canvas, antialias: false, pixelRatioCap: 2 });
@@ -228,13 +239,15 @@ export class App {
       }),
       kill: () => g.sim.debugKill(),
       genHash: (seed: number, n: number) => generationHash(seed, n),
+      workerStats: () => (this.workerSource ? { ...this.workerSource.stats } : null),
+      genHashViaWorker: (seed: number, n: number) => generationHashViaWorker(seed, n),
       benchStart: (o: BenchOptions) => benchStart(g, o),
       benchMeasure: (seconds: number) => benchMeasure(seconds),
     };
   }
 
   private save(): void {
-    this.profile.director = this.source.director.snapshot();
+    this.profile.director = this.gen.director.snapshot();
     this.profileStore.save(this.profile);
   }
 
@@ -384,7 +397,7 @@ export class App {
       this.profile = defaultProfile();
       this.settings = defaultSettings();
       this.settings.privacy.noticeSeen = true;
-      this.source.director.restore(null);
+      this.gen.director.restore(null);
       ensureMissions(this.profile, dayKey(Date.now()));
       this.applySettings();
       this.ui.setBest(0);

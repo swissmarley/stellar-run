@@ -15,7 +15,7 @@ Tilt steering and installing as an app need HTTPS. The production site on GitHub
 ## Build
 
 ```bash
-npm run build                   # static site in dist/ (gzip ≈ 280 KB, JS ≈ 195 KB)
+npm run build                   # static site in dist/ (gzip ≈ 290 KB, JS ≈ 206 KB incl. the generation worker)
 npm run preview                 # serve dist/ at http://localhost:4173/stellar-run/
 ```
 
@@ -37,7 +37,7 @@ iPhone 15 and foldable viewports.
 
 ```bash
 npm run lint                    # Biome + TypeScript (strict), must be clean
-npm test                        # Vitest: 141 unit tests (~12 s)
+npm test                        # Vitest: 148 unit tests (~25 s)
 npm run bot -- --runs 100 --seed 1    # 100 perfect-bot + 100 human-bot seeded runs (~4 s)
 npm run test:e2e                # Playwright: Chromium + WebKit, 3 device profiles
 npm run ci                      # all of the above + build, like CI

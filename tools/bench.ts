@@ -12,10 +12,15 @@ import { type Browser, chromium, devices, type Page, webkit } from '@playwright/
 import { preview } from 'vite';
 
 const quick = process.argv.includes('--quick');
+const only = process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1] : null;
 const S = (s: number): number => (quick ? Math.min(8, s) : s);
 
 interface Config {
   name: string;
+  /** Extra query string, e.g. '?gen=sync' to keep generation on the main thread. */
+  query?: string;
+  /** Fixed generation difficulty (stress test); omitted = adaptive. */
+  difficulty?: number;
   engine: 'chromium' | 'webkit';
   tier: 'low' | 'medium' | 'high';
   cpu: number;
@@ -27,6 +32,25 @@ interface Config {
 // it is kept for one reference config only. Phone estimates scale the measured work time instead (docs/PERF.md).
 const CONFIGS: Config[] = [
   { name: 'chromium-high', engine: 'chromium', tier: 'high', cpu: 1, fps30: false, seconds: S(60) },
+  {
+    name: 'chromium-high-d0.9-worker-gen',
+    engine: 'chromium',
+    tier: 'high',
+    cpu: 1,
+    fps30: false,
+    seconds: S(60),
+    difficulty: 0.9,
+  },
+  {
+    name: 'chromium-high-d0.9-sync-gen',
+    engine: 'chromium',
+    tier: 'high',
+    cpu: 1,
+    fps30: false,
+    seconds: S(60),
+    difficulty: 0.9,
+    query: '?gen=sync',
+  },
   { name: 'chromium-medium', engine: 'chromium', tier: 'medium', cpu: 1, fps30: false, seconds: S(45) },
   { name: 'chromium-low', engine: 'chromium', tier: 'low', cpu: 1, fps30: false, seconds: S(30) },
   { name: 'chromium-medium-30fps', engine: 'chromium', tier: 'medium', cpu: 1, fps30: true, seconds: S(30) },
@@ -91,12 +115,17 @@ function gcStats(
   return { minor, major, minorMaxMs: +minorMax.toFixed(2), majorMaxMs: +majorMax.toFixed(2) };
 }
 
-async function openPage(browser: Browser, url: string, engine: 'chromium' | 'webkit'): Promise<Page> {
+async function openPage(
+  browser: Browser,
+  url: string,
+  engine: 'chromium' | 'webkit',
+  query = '',
+): Promise<Page> {
   const ctx = await browser.newContext(
     engine === 'chromium' ? { ...devices['Pixel 7'] } : { ...devices['iPhone 15'] },
   );
   const page = await ctx.newPage();
-  await page.goto(url);
+  await page.goto(url + query);
   const ok = page.getByRole('button', { name: "Let's fly" });
   if (await ok.isVisible().catch(() => false)) await ok.click();
   return page;
@@ -114,8 +143,9 @@ async function main(): Promise<void> {
   const safari = await webkit.launch();
   try {
     for (const c of CONFIGS) {
+      if (only && !c.name.includes(only)) continue;
       const browser = c.engine === 'chromium' ? chrome : safari;
-      const page = await openPage(browser, url, c.engine);
+      const page = await openPage(browser, url, c.engine, c.query ?? '');
       let cdp = null;
       if (c.engine === 'chromium') {
         cdp = await page.context().newCDPSession(page);
@@ -129,6 +159,7 @@ async function main(): Promise<void> {
         fps30: c.fps30,
         seed: 7,
         warmup: quick ? 2 : 4,
+        difficulty: c.difficulty ?? -1,
       });
       if (c.engine === 'chromium') {
         await chrome.startTracing(page, {
@@ -170,7 +201,10 @@ async function main(): Promise<void> {
     results,
   };
   mkdirSync('docs/perf', { recursive: true });
-  writeFileSync(`docs/perf/bench${quick ? '-quick' : ''}.json`, `${JSON.stringify(out, null, 2)}\n`);
+  writeFileSync(
+    `docs/perf/bench${quick ? '-quick' : only ? `-${only}` : ''}.json`,
+    `${JSON.stringify(out, null, 2)}\n`,
+  );
   console.log(JSON.stringify(out.bundle));
 }
 
