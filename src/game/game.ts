@@ -166,6 +166,22 @@ export class Game {
     this.listeners.push(fn);
   }
 
+  /**
+   * Compiles every shader program up front (behind the boot screen) so the first obstacles of a run never
+   * cause a compile hitch. Hidden instanced meshes are made visible just for the compile pass.
+   */
+  warmup(): void {
+    const hidden: THREE.Object3D[] = [];
+    this.scene.traverse((o) => {
+      if (!o.visible) {
+        hidden.push(o);
+        o.visible = true;
+      }
+    });
+    this.renderer.compile(this.scene, this.rig.camera);
+    for (const o of hidden) o.visible = false;
+  }
+
   /** Applies a quality tier (pixel ratio, post-processing, particle/dust budgets). */
   applyQuality(tier: QualityTier): void {
     this.tier = tier;

@@ -356,3 +356,42 @@
 | milestone | fanfare | 0.5 | 1 | 500 |
 | biome | airSwell | 0.6 | 1 | 1000 |
 
+## Adaptive music
+
+| Parameter | Value |
+|---|---|
+| `bpm` | 116 |
+| `bars` | 8 |
+| `beatsPerBar` | 4 |
+| `bass` | R.r.O.r.R.r.O.rF |
+| `arp` | 01201201201201323210321032103213 |
+| `drums.kick.grid` | 9...9...9...9... |
+| `drums.kick.fill` | 9...9...9.6.9.6. |
+| `drums.snare.grid` | ....9.......9... |
+| `drums.snare.fill` | ....9...4...9579 |
+| `drums.hat.grid` | 3.6.3.6.3.6.3..3 |
+| `drums.hat.fill` | 3.6.3.6.3.6..... |
+| `drums.open.grid` | ..............5. |
+| `drums.open.fill` | ................ |
+| `bassSpeed` | 0.25 |
+| `drumsSpeed` | 0.5 |
+| `leadDanger` | 0.55 |
+| `ramp` | 0.12 |
+| `focusDrumDuck` | 0.45 |
+| `menuPad` | 0.8 |
+| `fadeIn` | 0.3 |
+| `fadeOut` | 0.8 |
+| `crossfade` | 0.25 |
+| `speedOpen` | 0.35 |
+| `menuCutoff` | 0.5 |
+| `focusCutoff` | 650 |
+| `focusQ` | 2.5 |
+| `focusPitch` | -2 |
+| `sfxFocusCutoff` | 2200 |
+| `sfxFocusPitch` | -3 |
+| `cacheBiomes` | 2 |
+| `layer pad` | gain 0.35 |
+| `layer bass` | gain 0.5 |
+| `layer drums` | gain 0.8 |
+| `layer lead` | gain 0.3 |
+

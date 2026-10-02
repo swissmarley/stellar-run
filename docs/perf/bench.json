@@ -1,0 +1,254 @@
+{
+  "date": "2026-10-02T18:21:40.932Z",
+  "host": "Apple M4 (macOS), headless Playwright",
+  "quick": false,
+  "bundle": {
+    "files": 10,
+    "rawKB": 813,
+    "gzipKB": 275,
+    "jsGzipKB": 193
+  },
+  "results": [
+    {
+      "config": "chromium-high",
+      "cpuThrottle": 1,
+      "tier": "high",
+      "fps30": false,
+      "frames": 3600,
+      "seconds": 60,
+      "fps": 60,
+      "frameMs": {
+        "p50": 16.7,
+        "p95": 16.8,
+        "p99": 16.8,
+        "max": 16.8
+      },
+      "workMs": {
+        "p50": 0.8,
+        "p95": 1.1,
+        "p99": 1.4,
+        "max": 4.8
+      },
+      "drawCalls": {
+        "mean": 24.7,
+        "max": 29
+      },
+      "triangles": {
+        "mean": 6175,
+        "max": 8702
+      },
+      "simTicks": 6158,
+      "distance": 2825,
+      "deaths": 0,
+      "jsHeapMB": 33.5,
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+      "gc": {
+        "minor": 17,
+        "major": 19,
+        "minorMaxMs": 1.3,
+        "majorMaxMs": 3.83
+      },
+      "jsHeapUsedMB": 5.7
+    },
+    {
+      "config": "chromium-medium",
+      "cpuThrottle": 1,
+      "tier": "medium",
+      "fps30": false,
+      "frames": 2700,
+      "seconds": 45,
+      "fps": 60,
+      "frameMs": {
+        "p50": 16.7,
+        "p95": 16.7,
+        "p99": 16.8,
+        "max": 16.8
+      },
+      "workMs": {
+        "p50": 0.8,
+        "p95": 1,
+        "p99": 1.2,
+        "max": 6
+      },
+      "drawCalls": {
+        "mean": 19.6,
+        "max": 21
+      },
+      "triangles": {
+        "mean": 5180,
+        "max": 6549
+      },
+      "simTicks": 4566,
+      "distance": 1966,
+      "deaths": 0,
+      "jsHeapMB": 24.8,
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+      "gc": {
+        "minor": 14,
+        "major": 12,
+        "minorMaxMs": 1.08,
+        "majorMaxMs": 2.3
+      },
+      "jsHeapUsedMB": 5.6
+    },
+    {
+      "config": "chromium-low",
+      "cpuThrottle": 1,
+      "tier": "low",
+      "fps30": false,
+      "frames": 1800,
+      "seconds": 30,
+      "fps": 60,
+      "frameMs": {
+        "p50": 16.7,
+        "p95": 16.8,
+        "p99": 16.8,
+        "max": 16.8
+      },
+      "workMs": {
+        "p50": 0.7,
+        "p95": 1.1,
+        "p99": 1.4,
+        "max": 3.4
+      },
+      "drawCalls": {
+        "mean": 17,
+        "max": 18
+      },
+      "triangles": {
+        "mean": 5600,
+        "max": 6700
+      },
+      "simTicks": 3074,
+      "distance": 1344,
+      "deaths": 0,
+      "jsHeapMB": 24.8,
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+      "gc": {
+        "minor": 7,
+        "major": 8,
+        "minorMaxMs": 0.92,
+        "majorMaxMs": 2.6
+      },
+      "jsHeapUsedMB": 5.4
+    },
+    {
+      "config": "chromium-medium-30fps",
+      "cpuThrottle": 1,
+      "tier": "medium",
+      "fps30": true,
+      "frames": 1800,
+      "seconds": 30,
+      "fps": 60,
+      "frameMs": {
+        "p50": 16.7,
+        "p95": 16.7,
+        "p99": 16.8,
+        "max": 16.8
+      },
+      "workMs": {
+        "p50": 0.4,
+        "p95": 1,
+        "p99": 1.2,
+        "max": 2.3
+      },
+      "drawCalls": {
+        "mean": 17.7,
+        "max": 19
+      },
+      "triangles": {
+        "mean": 5987,
+        "max": 7113
+      },
+      "simTicks": 3079,
+      "distance": 1341,
+      "deaths": 0,
+      "jsHeapMB": 24.8,
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+      "gc": {
+        "minor": 7,
+        "major": 6,
+        "minorMaxMs": 1.02,
+        "majorMaxMs": 1.34
+      },
+      "jsHeapUsedMB": 5.9
+    },
+    {
+      "config": "chromium-high-cpu4x",
+      "cpuThrottle": 4,
+      "tier": "high",
+      "fps30": false,
+      "frames": 1800,
+      "seconds": 30,
+      "fps": 60,
+      "frameMs": {
+        "p50": 16.7,
+        "p95": 16.7,
+        "p99": 16.8,
+        "max": 16.8
+      },
+      "workMs": {
+        "p50": 0.1,
+        "p95": 0.8,
+        "p99": 1.1,
+        "max": 2.2
+      },
+      "drawCalls": {
+        "mean": 22.5,
+        "max": 26
+      },
+      "triangles": {
+        "mean": 6549,
+        "max": 7510
+      },
+      "simTicks": 3078,
+      "distance": 1338,
+      "deaths": 0,
+      "jsHeapMB": 24.8,
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+      "gc": {
+        "minor": 9,
+        "major": 8,
+        "minorMaxMs": 1.41,
+        "majorMaxMs": 3.27
+      },
+      "jsHeapUsedMB": 5.7
+    },
+    {
+      "config": "webkit-medium",
+      "cpuThrottle": 1,
+      "tier": "medium",
+      "fps30": false,
+      "frames": 2701,
+      "seconds": 45,
+      "fps": 60,
+      "frameMs": {
+        "p50": 17,
+        "p95": 18,
+        "p99": 19,
+        "max": 21
+      },
+      "workMs": {
+        "p50": 1,
+        "p95": 2,
+        "p99": 2,
+        "max": 6
+      },
+      "drawCalls": {
+        "mean": 18.7,
+        "max": 23
+      },
+      "triangles": {
+        "mean": 6050,
+        "max": 8021
+      },
+      "simTicks": 4568,
+      "distance": 2052,
+      "deaths": 0,
+      "jsHeapMB": null,
+      "gpu": "Apple GPU",
+      "gc": null,
+      "jsHeapUsedMB": null
+    }
+  ]
+}

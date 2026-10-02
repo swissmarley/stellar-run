@@ -1,0 +1,9 @@
+chromium-high | fps 60 | frame p50/p95/p99/max 16.7 16.8 16.8 16.8 | work p50/p95/p99/max 0.8 1.1 1.4 4.8 | calls {'mean': 24.7, 'max': 29} | tris {'mean': 6175, 'max': 8702} | gc {'minor': 17, 'major': 19, 'minorMaxMs': 1.3, 'majorMaxMs': 3.83} | heap 5.7
+chromium-medium | fps 60 | frame p50/p95/p99/max 16.7 16.7 16.8 16.8 | work p50/p95/p99/max 0.8 1 1.2 6 | calls {'mean': 19.6, 'max': 21} | tris {'mean': 5180, 'max': 6549} | gc {'minor': 14, 'major': 12, 'minorMaxMs': 1.08, 'majorMaxMs': 2.3} | heap 5.6
+chromium-low | fps 60 | frame p50/p95/p99/max 16.7 16.8 16.8 16.8 | work p50/p95/p99/max 0.7 1.1 1.4 3.4 | calls {'mean': 17, 'max': 18} | tris {'mean': 5600, 'max': 6700} | gc {'minor': 7, 'major': 8, 'minorMaxMs': 0.92, 'majorMaxMs': 2.6} | heap 5.4
+chromium-medium-30fps | fps 60 | frame p50/p95/p99/max 16.7 16.7 16.8 16.8 | work p50/p95/p99/max 0.4 1 1.2 2.3 | calls {'mean': 17.7, 'max': 19} | tris {'mean': 5987, 'max': 7113} | gc {'minor': 7, 'major': 6, 'minorMaxMs': 1.02, 'majorMaxMs': 1.34} | heap 5.9
+chromium-high-cpu4x | fps 60 | frame p50/p95/p99/max 16.7 16.7 16.8 16.8 | work p50/p95/p99/max 0.1 0.8 1.1 2.2 | calls {'mean': 22.5, 'max': 26} | tris {'mean': 6549, 'max': 7510} | gc {'minor': 9, 'major': 8, 'minorMaxMs': 1.41, 'majorMaxMs': 3.27} | heap 5.7
+webkit-medium | fps 60 | frame p50/p95/p99/max 17 18 19 21 | work p50/p95/p99/max 1 2 2 6 | calls {'mean': 18.7, 'max': 23} | tris {'mean': 6050, 'max': 8021} | gc None | heap None
+{'files': 10, 'rawKB': 813, 'gzipKB': 275, 'jsGzipKB': 193}
+
+[exited with code 0]

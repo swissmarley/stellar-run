@@ -251,6 +251,25 @@ try {
       cues.map((c) => [c.id, c.recipe, c.gain, c.voices, c.cooldownMs]),
     );
   }
+  const music = (audio as unknown as { MUSIC?: Record<string, unknown> }).MUSIC;
+  if (music) {
+    p('## Adaptive music');
+    p();
+    const flat: (string | number)[][] = [];
+    const walk = (prefix: string, v: unknown): void => {
+      if (typeof v === 'number' || typeof v === 'string' || typeof v === 'boolean')
+        flat.push([`\`${prefix}\``, String(v)]);
+      else if (Array.isArray(v)) {
+        if (v.every((x) => typeof x === 'number')) flat.push([`\`${prefix}\``, v.join(', ')]);
+      } else if (v && typeof v === 'object') {
+        for (const [k, x] of Object.entries(v)) walk(prefix ? `${prefix}.${k}` : k, x);
+      }
+    };
+    walk('', music);
+    const layers = (music.layers ?? []) as { id: string; gain: number }[];
+    for (const l of layers) flat.push([`\`layer ${l.id}\``, `gain ${l.gain}`]);
+    table(['Parameter', 'Value'], flat);
+  }
 } catch {
   /* audio data not present */
 }

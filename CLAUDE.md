@@ -24,7 +24,7 @@ TypeScript + Three.js (the only runtime dependency) + Vite. Node ≥ 22.18 (runs
 - `tools/`: bot, bench, doc generators. `docs/`: PLAN, ARCHITECTURE, TUNING, DECISIONS, PERF, README.
 
 ## Conventions
-- Sim runs at fixed 60 Hz; core state lives in typed arrays. No allocations in per-tick or per-frame paths.
+- Sim runs at fixed 120 Hz; hot state lives in typed arrays (V8 boxes doubles in fields/args). No object, array, closure or string allocation in per-tick or per-frame paths.
 - Every gameplay constant lives in `src/data/` and is documented (TUNING.md is generated from it).
 - Imports use explicit `.ts` extensions (Node type stripping); only erasable TS syntax (no enums or namespaces).
 - Record non-obvious choices in `docs/DECISIONS.md`. Commits are one per milestone or feature, with clear messages.

@@ -167,7 +167,8 @@ export class Ui {
       if (!el) throw new Error(`Unknown screen ${name}`);
       el.classList.remove('hidden');
       const first = el.querySelector<HTMLElement>('.btn-primary, button');
-      first?.focus({ preventScroll: true });
+      // Move focus for keyboard/mouse users; on touch screens a focus ring on a fresh screen is just noise.
+      if (matchMedia('(pointer: fine)').matches) first?.focus({ preventScroll: true });
     }
   }
 

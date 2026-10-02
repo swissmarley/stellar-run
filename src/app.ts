@@ -1,3 +1,4 @@
+import { type BenchOptions, benchMeasure, benchStart } from './bench.ts';
 import { ProceduralSource } from './core/gen/generator.ts';
 import { generationHash } from './core/gen/golden.ts';
 import {
@@ -203,6 +204,7 @@ export class App {
     matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', () => this.applySettings());
 
     this.applySettings();
+    this.game.warmup();
     this.ui.setBest(this.profile.best.score);
     this.ui.show('menu');
     if (!this.settings.privacy.noticeSeen) this.showNotice();
@@ -226,6 +228,8 @@ export class App {
       }),
       kill: () => g.sim.debugKill(),
       genHash: (seed: number, n: number) => generationHash(seed, n),
+      benchStart: (o: BenchOptions) => benchStart(g, o),
+      benchMeasure: (seconds: number) => benchMeasure(seconds),
     };
   }
 

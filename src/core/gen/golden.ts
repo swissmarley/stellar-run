@@ -42,4 +42,4 @@ export function generationHash(seed: number, n: number): number {
 }
 
 /** Golden values (update deliberately with `node tools/golden.ts` when generation output changes on purpose). */
-export const GOLDEN_GENERATION: Readonly<Record<number, number>> = { 1: 1516868846, 2024: 4230467465 };
+export const GOLDEN_GENERATION: Readonly<Record<number, number>> = { 1: 740362528, 2024: 4246383544 };

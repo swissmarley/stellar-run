@@ -92,12 +92,32 @@ function blockRoundedRect(
 
 /** Rasterises every active obstacle into the free masks F_0..F_{K-1}. */
 export function rasterize(c: ChunkData): void {
-  const K = c.sliceCount;
+  rasterizeRange(c, 0, c.sliceCount - 1);
+}
+
+/** Output of sliceRange: [first slice, last slice] an obstacle can influence. */
+export const SLICE_RANGE = new Int32Array(2);
+
+/** Slices whose free masks obstacle i can affect → SLICE_RANGE (clamped to the chunk). */
+export function sliceRange(c: ChunkData, i: number): void {
+  const sphere = c.obsShape[i] === SHAPE_SPHERE;
+  const inflate = sphere ? c.obsR[i]! + PROFILE.rMax + c.margin : PROFILE.rMax + c.margin;
+  const reachS = (sphere ? 0 : c.obsHS[i]!) + inflate + PROFILE.hMax;
+  let klo = Math.floor((c.obsS[i]! - reachS - c.startS) / c.sliceLen);
+  let khi = Math.floor((c.obsS[i]! + reachS - c.startS) / c.sliceLen);
+  if (klo < 0) klo = 0;
+  if (khi > c.sliceCount - 1) khi = c.sliceCount - 1;
+  SLICE_RANGE[0] = klo;
+  SLICE_RANGE[1] = khi;
+}
+
+/** Rebuilds the free masks of slices k0..k1 only (incremental repair). */
+export function rasterizeRange(c: ChunkData, k0: number, k1: number): void {
   const L = c.sliceLen;
   const h = PROFILE.hMax;
   const r = PROFILE.rMax;
   const m = c.margin;
-  for (let k = 0; k < K; k++) fillRows(c.free, k * ROWS, FULL_ROW);
+  for (let k = k0; k <= k1; k++) fillRows(c.free, k * ROWS, FULL_ROW);
   for (let i = 0; i < c.obsCount; i++) {
     if (!c.isActive(i)) continue;
     const sphere = c.obsShape[i] === SHAPE_SPHERE;
@@ -110,8 +130,8 @@ export function rasterize(c: ChunkData): void {
     const reachS = hs + inflate + h;
     let klo = Math.floor((os - reachS - c.startS) / L);
     let khi = Math.floor((os + reachS - c.startS) / L);
-    if (klo < 0) klo = 0;
-    if (khi > K - 1) khi = K - 1;
+    if (klo < k0) klo = k0;
+    if (khi > k1) khi = k1;
     for (let k = klo; k <= khi; k++) {
       const sa = c.startS + k * L;
       const sb = sa + L;
@@ -138,9 +158,13 @@ export function rasterize(c: ChunkData): void {
 
 /** Backward-viable sets V_0..V_K (V_K = FULL). */
 export function backward(c: ChunkData): void {
-  const K = c.sliceCount;
-  fillRows(c.viable, K * ROWS, FULL_ROW);
-  for (let k = K - 1; k >= 0; k--) {
+  fillRows(c.viable, c.sliceCount * ROWS, FULL_ROW);
+  backwardFrom(c, c.sliceCount - 1);
+}
+
+/** Recomputes V_kTop..V_0 assuming V_{kTop+1} is already valid (incremental repair). */
+export function backwardFrom(c: ChunkData, kTop: number): void {
+  for (let k = kTop; k >= 0; k--) {
     const fo = k * ROWS;
     const vn = (k + 1) * ROWS;
     for (let j = 0; j < ROWS; j++) scratchA[j] = c.free[fo + j]! & c.viable[vn + j]!;

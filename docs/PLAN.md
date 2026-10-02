@@ -214,4 +214,4 @@ The project folder `/Users/nakya/Documents/ClaudeProjects/Stellar-Run` is empty 
 - [x] M2 Procgen + director
 - [x] M3 Juice
 - [x] M4 Meta
-- [ ] M5 Optimise, accessibility, report
+- [x] M5 Optimise, accessibility, report

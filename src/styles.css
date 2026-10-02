@@ -542,6 +542,12 @@ body {
   }
 }
 
+.reduced-motion .hud-ability.ready,
+.reduced-motion .hud-mult.hot {
+  animation: none;
+  transform: none;
+}
+
 /* ---------- Meta screens ---------- */
 .screen-meta {
   gap: 0.8rem;

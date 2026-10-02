@@ -21,7 +21,17 @@ import {
   SPAWN_ROW,
 } from './grid.ts';
 import { instantiatePattern } from './layouts.ts';
-import { backward, certify, computeSlices, failingEntries, rasterize } from './passability.ts';
+import {
+  backward,
+  backwardFrom,
+  certify,
+  computeSlices,
+  failingEntries,
+  rasterize,
+  rasterizeRange,
+  SLICE_RANGE,
+  sliceRange,
+} from './passability.ts';
 import { placeShard } from './place.ts';
 import type { ChunkSource } from './source.ts';
 import { certifiedSpeed, cruiseFor, PROFILE } from './validation-profile.ts';
@@ -38,6 +48,8 @@ export interface GenStats {
 const STREAM_GEN = 1;
 const scratch = new Int32Array(ROWS);
 const scratch2 = new Int32Array(ROWS);
+const saveF = new Int32Array((TUNING.MAX_SLICES + 1) * ROWS);
+const saveV = new Int32Array((TUNING.MAX_SLICES + 1) * ROWS);
 const BIOME_PATTERNS: number[][] = BIOMES.map((b) =>
   PATTERNS.flatMap((p, i) => (p.biomes.includes(b.id) ? [i] : [])),
 );
@@ -137,7 +149,11 @@ export class ProceduralSource implements ChunkSource {
     }
   }
 
-  /** Certifies the chunk, removing the most helpful obstacles (up to MAX_REPAIR_REMOVALS) if needed. */
+  /**
+   * Certifies the chunk, removing the most helpful obstacles (up to MAX_REPAIR_REMOVALS) if needed. Candidate
+   * removals are evaluated incrementally: only the slices the obstacle touches are re-rasterised and the
+   * backward pass restarts from there; the final certificate is always recomputed from scratch.
+   */
   private certifyWithRepair(c: ChunkData): boolean {
     rasterize(c);
     backward(c);
@@ -149,11 +165,18 @@ export class ProceduralSource implements ChunkSource {
       let bestFail = fail;
       for (let i = 0; i < c.obsCount; i++) {
         if (!c.isActive(i) || !this.removable(c, i) || !this.touchesSlices(c, i, lo, hi)) continue;
+        sliceRange(c, i);
+        const k0 = SLICE_RANGE[0]!;
+        const k1 = SLICE_RANGE[1]!;
+        saveF.set(c.free.subarray(k0 * ROWS, (k1 + 1) * ROWS));
+        saveV.set(c.viable.subarray(0, (k1 + 1) * ROWS));
         c.obsFlags[i]! |= OF_REMOVED;
-        rasterize(c);
-        backward(c);
+        rasterizeRange(c, k0, k1);
+        backwardFrom(c, k1);
         const f = failingEntries(c);
         c.obsFlags[i]! &= ~OF_REMOVED;
+        c.free.set(saveF.subarray(0, (k1 - k0 + 1) * ROWS), k0 * ROWS);
+        c.viable.set(saveV.subarray(0, (k1 + 1) * ROWS), 0);
         if (f < bestFail) {
           bestFail = f;
           best = i;
@@ -161,6 +184,9 @@ export class ProceduralSource implements ChunkSource {
       }
       if (best < 0) break;
       c.obsFlags[best]! |= OF_REMOVED;
+      sliceRange(c, best);
+      rasterizeRange(c, SLICE_RANGE[0]!, SLICE_RANGE[1]!);
+      backwardFrom(c, SLICE_RANGE[1]!);
       removals++;
       this.stats.removals++;
       fail = bestFail;
