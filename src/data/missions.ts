@@ -1,0 +1,71 @@
+import type { MissionDef } from './types.ts';
+
+/** Daily mission pool. Three distinct types are drawn per UTC day from a date-seeded RNG. */
+export const MISSIONS: readonly MissionDef[] = Object.freeze<MissionDef[]>([
+  {
+    id: 'distance_run',
+    type: 'distanceRun',
+    text: 'Fly {n} m in a single run',
+    target: [800, 3200],
+    step: 100,
+    reward: 60,
+  },
+  {
+    id: 'distance_total',
+    type: 'distanceTotal',
+    text: 'Fly {n} m in total',
+    target: [3000, 12000],
+    step: 500,
+    reward: 80,
+  },
+  {
+    id: 'near_run',
+    type: 'nearMissRun',
+    text: 'Score {n} near-misses in one run',
+    target: [6, 24],
+    step: 1,
+    reward: 70,
+  },
+  {
+    id: 'near_total',
+    type: 'nearMissTotal',
+    text: 'Score {n} near-misses',
+    target: [20, 80],
+    step: 5,
+    reward: 80,
+  },
+  {
+    id: 'shards_total',
+    type: 'shardsTotal',
+    text: 'Collect {n} shards',
+    target: [40, 200],
+    step: 10,
+    reward: 60,
+  },
+  {
+    id: 'ability_uses',
+    type: 'abilityUses',
+    text: 'Use your ship ability {n} times',
+    target: [2, 8],
+    step: 1,
+    reward: 50,
+  },
+  { id: 'boosts', type: 'boosts', text: 'Boost {n} times', target: [10, 40], step: 5, reward: 40 },
+  {
+    id: 'score_run',
+    type: 'scoreRun',
+    text: 'Score {n} points in one run',
+    target: [2000, 15000],
+    step: 500,
+    reward: 90,
+  },
+  { id: 'reach_biome', type: 'reachBiome', text: 'Reach the {biome}', target: [1, 3], step: 1, reward: 100 },
+  {
+    id: 'perfects',
+    type: 'perfects',
+    text: 'Pull off {n} PERFECT near-misses',
+    target: [2, 10],
+    step: 1,
+    reward: 90,
+  },
+]);

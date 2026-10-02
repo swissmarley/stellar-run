@@ -144,6 +144,16 @@ export class Ui {
     this.root.append(el);
   }
 
+  /** Replaces (or adds) a screen built from current state; keeps it visible if it was the current one. */
+  replace(name: string, el: HTMLElement): void {
+    const old = this.screens.get(name);
+    const visible = this.current === name;
+    if (!visible) el.classList.add('hidden');
+    this.screens.set(name, el);
+    if (old) old.replaceWith(el);
+    else this.root.append(el);
+  }
+
   get screen(): string | null {
     return this.current;
   }

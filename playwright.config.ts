@@ -20,7 +20,6 @@ export default defineConfig({
   },
   projects: [
     { name: 'android-chromium', use: { ...devices['Pixel 7'] } },
-    { name: 'ios-webkit', use: { ...devices['iPhone 15'] } },
     {
       name: 'foldable-chromium',
       use: {
@@ -31,5 +30,6 @@ export default defineConfig({
         hasTouch: true,
       },
     },
+    { name: 'ios-webkit', use: { ...devices['iPhone 15'] } },
   ],
 });

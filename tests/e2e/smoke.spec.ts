@@ -30,6 +30,7 @@ test('boots, plays, dies and restarts in under 2 s with no errors or third-party
 }) => {
   const p = collectProblems(page);
   await page.goto('./');
+  await page.getByRole('button', { name: "Let's fly" }).click();
   const play = page.getByRole('button', { name: 'PLAY' });
   await expect(play).toBeVisible();
   // Thumb-reachable: the primary action sits in the lower half of the screen.
@@ -65,6 +66,7 @@ test('boots, plays, dies and restarts in under 2 s with no errors or third-party
 
 test('dragging a finger steers the ship', async ({ page }) => {
   await page.goto('./');
+  await page.getByRole('button', { name: "Let's fly" }).click();
   await page.getByRole('button', { name: 'PLAY' }).tap();
   await expect.poll(() => flow(page)).toBe('running');
   const vp = page.viewportSize()!;
@@ -99,6 +101,7 @@ test('dragging a finger steers the ship', async ({ page }) => {
 
 test('HUD respects the layout: pause and ability buttons are on screen', async ({ page }) => {
   await page.goto('./');
+  await page.getByRole('button', { name: "Let's fly" }).click();
   await page.getByRole('button', { name: 'PLAY' }).tap();
   const vp = page.viewportSize()!;
   for (const name of ['Pause', 'Ability']) {
