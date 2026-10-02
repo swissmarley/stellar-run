@@ -66,15 +66,16 @@ describe('RunSim', () => {
     expect(new Set(a).size).toBeGreaterThan(10);
   });
 
-  it('advances s by speed·DT and never moves backwards', () => {
+  it('advances s by the tick-start speed·DT and never moves backwards', () => {
     const sim = new RunSim();
     sim.reset(1, new HandmadeSource(), stats());
     const f = new InputFrame();
     let last = sim.s;
-    for (let t = 0; t < 600 && sim.alive; t++) {
+    for (let t = 0; t < 5 / DT && sim.alive; t++) {
       const before = sim.s;
+      const v = sim.speed;
       sim.step(f);
-      expect(sim.s - before).toBeCloseTo(sim.speed * DT, 9);
+      expect(sim.s - before).toBeCloseTo(v * DT, 9);
       expect(sim.s).toBeGreaterThan(last);
       last = sim.s;
     }
@@ -85,7 +86,7 @@ describe('RunSim', () => {
     sim.reset(1, new HandmadeSource(), stats());
     const f = new InputFrame();
     let death = false;
-    for (let t = 0; t < 60 * 30 && !death; t++) {
+    for (let t = 0; t < 30 / DT && !death; t++) {
       sim.step(f);
       for (let i = sim.events.shift(); i >= 0; i = sim.events.shift())
         if (sim.events.codes[i] === EV.DEATH) death = true;
@@ -98,7 +99,7 @@ describe('RunSim', () => {
     const sim = new RunSim();
     sim.reset(1, new HandmadeSource(), stats());
     const f = new InputFrame();
-    for (let t = 0; t < 60 * 5; t++) sim.step(f);
+    for (let t = 0; t < 8 / DT; t++) sim.step(f);
     expect(sim.shards).toBeGreaterThan(0);
   });
 
@@ -106,7 +107,7 @@ describe('RunSim', () => {
     const sim = new RunSim();
     sim.reset(5, new HandmadeSource(), stats(1));
     const f = new InputFrame();
-    for (let t = 0; t < 60 * 20 && sim.alive; t++) {
+    for (let t = 0; t < 20 / DT && sim.alive; t++) {
       f.buttons = t % 30 === 0 ? BTN_BOOST : 0;
       f.setSteer(Math.sin(t / 30), Math.cos(t / 47));
       sim.step(f);

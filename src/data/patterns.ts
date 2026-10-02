@@ -1,0 +1,322 @@
+import type { PatternDef } from './types.ts';
+
+/**
+ * Obstacle patterns. A chunk is filled with patterns back to back (gap from the difficulty curve). Counts
+ * and sizes interpolate with difficulty; the validator removes or rejects anything that is not passable.
+ */
+export const PATTERNS: readonly PatternDef[] = Object.freeze<PatternDef[]>([
+  // ---- Breathers / fallbacks (empty corridor; trivially passable) ----
+  { id: 'breather_belt', biomes: ['belt'], minD: 0, maxD: 0.35, weight: 0.6, length: 30, elements: [] },
+  { id: 'breather_ion', biomes: ['ion'], minD: 0, maxD: 0.35, weight: 0.6, length: 30, elements: [] },
+  { id: 'breather_station', biomes: ['station'], minD: 0, maxD: 0.35, weight: 0.6, length: 30, elements: [] },
+  {
+    id: 'breather_singularity',
+    biomes: ['singularity'],
+    minD: 0,
+    maxD: 0.35,
+    weight: 0.6,
+    length: 30,
+    elements: [],
+  },
+
+  // ---- Asteroid Belt ----
+  {
+    id: 'belt_scatter',
+    biomes: ['belt', 'singularity'],
+    minD: 0,
+    maxD: 1,
+    weight: 3,
+    length: 45,
+    elements: [
+      { type: 'scatter', obstacle: 'rock_s', count: [4, 10], s: [0, 45], scale: [0.8, 1.3] },
+      { type: 'scatter', obstacle: 'rock_m', count: [1, 5], s: [5, 40], scale: [0.85, 1.15] },
+    ],
+  },
+  {
+    id: 'belt_wall',
+    biomes: ['belt'],
+    minD: 0.15,
+    maxD: 1,
+    weight: 2,
+    length: 30,
+    elements: [
+      {
+        type: 'wall',
+        obstacle: 'rock_m',
+        s: 15,
+        spacing: 2.3,
+        holes: [3, 1],
+        holeRadius: [2.6, 1.6],
+        scale: [0.9, 1.1],
+        jitter: 0.35,
+      },
+    ],
+  },
+  {
+    id: 'belt_boulders',
+    biomes: ['belt'],
+    minD: 0,
+    maxD: 1,
+    weight: 2,
+    length: 50,
+    elements: [
+      { type: 'scatter', obstacle: 'rock_l', count: [1, 3], s: [5, 45], scale: [0.9, 1.15] },
+      { type: 'scatter', obstacle: 'rock_xl', count: [0, 1.4], s: [10, 40], scale: [0.85, 1.05] },
+      { type: 'scatter', obstacle: 'rock_s', count: [2, 5], s: [0, 50], scale: [0.8, 1.2] },
+    ],
+  },
+  {
+    id: 'belt_slalom',
+    biomes: ['belt'],
+    minD: 0.1,
+    maxD: 1,
+    weight: 1.5,
+    length: 60,
+    elements: [
+      {
+        type: 'slalom',
+        obstacle: 'rock_l',
+        s: [5, 55],
+        count: [3, 6],
+        amplitude: [1.6, 3.0],
+        scale: [0.9, 1.1],
+        axis: 'x',
+      },
+    ],
+  },
+  {
+    id: 'belt_ring',
+    biomes: ['belt', 'singularity'],
+    minD: 0.2,
+    maxD: 1,
+    weight: 1.2,
+    length: 30,
+    elements: [
+      {
+        type: 'ring',
+        obstacle: 'rock_m',
+        s: 15,
+        radius: [2.6, 3.4],
+        count: [6, 10],
+        scale: [0.85, 1.05],
+        gap: [1.8, 0.9],
+      },
+    ],
+  },
+  {
+    id: 'belt_mines',
+    biomes: ['belt'],
+    minD: 0.35,
+    maxD: 1,
+    weight: 1,
+    length: 40,
+    elements: [
+      { type: 'scatter', obstacle: 'mine', count: [3, 8], s: [0, 40], scale: [0.9, 1.2] },
+      { type: 'scatter', obstacle: 'rock_s', count: [1, 4], s: [0, 40], scale: [0.8, 1.2] },
+    ],
+  },
+
+  // ---- Ion Storm ----
+  {
+    id: 'ion_beams',
+    biomes: ['ion'],
+    minD: 0,
+    maxD: 1,
+    weight: 2.5,
+    length: 50,
+    elements: [
+      {
+        type: 'beam',
+        obstacle: 'ion_beam',
+        s: [2, 10],
+        axis: 'x',
+        offset: [-2.6, 2.6],
+        count: [1, 3],
+        spacing: [12, 18],
+      },
+    ],
+  },
+  {
+    id: 'ion_pylons',
+    biomes: ['ion'],
+    minD: 0,
+    maxD: 1,
+    weight: 2.5,
+    length: 50,
+    elements: [
+      {
+        type: 'beam',
+        obstacle: 'ion_pylon',
+        s: [2, 8],
+        axis: 'y',
+        offset: [-3.8, 3.8],
+        count: [2, 5],
+        spacing: [7, 12],
+      },
+    ],
+  },
+  {
+    id: 'ion_gate',
+    biomes: ['ion'],
+    minD: 0.2,
+    maxD: 1,
+    weight: 1.6,
+    length: 32,
+    elements: [{ type: 'gate', obstacle: 'ion_beam', obstacleV: 'ion_pylon', s: 16, opening: [3.6, 2.2] }],
+  },
+  {
+    id: 'ion_drones',
+    biomes: ['ion', 'station'],
+    minD: 0.2,
+    maxD: 1,
+    weight: 1.6,
+    length: 50,
+    elements: [
+      {
+        type: 'drone',
+        obstacle: 'drone',
+        s: [5, 45],
+        count: [1, 3],
+        amplitude: [1.6, 3.2],
+        period: [90, 150],
+        mode: 'x',
+      },
+    ],
+  },
+  {
+    id: 'ion_minefield',
+    biomes: ['ion'],
+    minD: 0.1,
+    maxD: 1,
+    weight: 1.5,
+    length: 45,
+    elements: [{ type: 'scatter', obstacle: 'mine', count: [4, 11], s: [0, 45], scale: [0.9, 1.25] }],
+  },
+
+  // ---- Dead Station ----
+  {
+    id: 'station_girders',
+    biomes: ['station'],
+    minD: 0,
+    maxD: 1,
+    weight: 2.5,
+    length: 50,
+    elements: [
+      {
+        type: 'beam',
+        obstacle: 'girder_h',
+        s: [2, 8],
+        axis: 'x',
+        offset: [-2.4, 2.4],
+        count: [1, 2],
+        spacing: [14, 20],
+      },
+      {
+        type: 'beam',
+        obstacle: 'girder_v',
+        s: [8, 14],
+        axis: 'y',
+        offset: [-3.6, 3.6],
+        count: [1, 3],
+        spacing: [9, 14],
+      },
+    ],
+  },
+  {
+    id: 'station_plates',
+    biomes: ['station'],
+    minD: 0,
+    maxD: 1,
+    weight: 2,
+    length: 45,
+    elements: [
+      { type: 'scatter', obstacle: 'plate', count: [2, 5], s: [0, 45], scale: [0.8, 1.15] },
+      { type: 'scatter', obstacle: 'crate', count: [1, 4], s: [0, 45], scale: [0.8, 1.2] },
+    ],
+  },
+  {
+    id: 'station_window',
+    biomes: ['station'],
+    minD: 0.25,
+    maxD: 1,
+    weight: 1.5,
+    length: 32,
+    elements: [{ type: 'gate', obstacle: 'girder_h', obstacleV: 'girder_v', s: 16, opening: [3.8, 2.3] }],
+  },
+  {
+    id: 'station_debris',
+    biomes: ['station'],
+    minD: 0,
+    maxD: 1,
+    weight: 2,
+    length: 45,
+    elements: [
+      { type: 'scatter', obstacle: 'crate', count: [4, 10], s: [0, 45], scale: [0.8, 1.3] },
+      { type: 'scatter', obstacle: 'rock_s', count: [1, 3], s: [0, 45], scale: [0.7, 1] },
+    ],
+  },
+  {
+    id: 'station_sentries',
+    biomes: ['station'],
+    minD: 0.3,
+    maxD: 1,
+    weight: 1.3,
+    length: 45,
+    elements: [
+      {
+        type: 'drone',
+        obstacle: 'drone',
+        s: [5, 40],
+        count: [1, 2],
+        amplitude: [1.4, 2.6],
+        period: [100, 160],
+        mode: 'orbit',
+      },
+    ],
+  },
+
+  // ---- Singularity ----
+  {
+    id: 'sing_well',
+    biomes: ['singularity'],
+    minD: 0,
+    maxD: 1,
+    weight: 2.2,
+    length: 70,
+    elements: [
+      { type: 'well', obstacle: 'singularity', s: 35, x: [-2.2, 2.2], y: [-1.6, 1.6] },
+      { type: 'scatter', obstacle: 'rock_s', count: [2, 6], s: [0, 70], scale: [0.8, 1.2] },
+    ],
+  },
+  {
+    id: 'sing_debris',
+    biomes: ['singularity'],
+    minD: 0,
+    maxD: 1,
+    weight: 1.8,
+    length: 45,
+    elements: [
+      { type: 'scatter', obstacle: 'rock_m', count: [2, 6], s: [0, 45], scale: [0.85, 1.15] },
+      { type: 'scatter', obstacle: 'mine', count: [1, 4], s: [0, 45], scale: [0.9, 1.1] },
+    ],
+  },
+  {
+    id: 'sing_orbiters',
+    biomes: ['singularity'],
+    minD: 0.25,
+    maxD: 1,
+    weight: 1.3,
+    length: 45,
+    elements: [
+      {
+        type: 'drone',
+        obstacle: 'drone',
+        s: [5, 40],
+        count: [1, 3],
+        amplitude: [1.8, 3.0],
+        period: [90, 150],
+        mode: 'orbit',
+      },
+    ],
+  },
+]);

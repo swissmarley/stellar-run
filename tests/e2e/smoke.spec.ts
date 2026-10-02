@@ -1,8 +1,10 @@
 import { expect, type Page, test } from '@playwright/test';
+import { GOLDEN_GENERATION } from '../../src/core/gen/golden.ts';
 
 type Stellar = {
   state(): { flow: string; s: number; x: number; y: number; alive: boolean; score: number };
   kill(): void;
+  genHash(seed: number, n: number): number;
 };
 
 function collectProblems(page: Page): { errors: string[]; foreign: string[] } {
@@ -106,5 +108,18 @@ test('HUD respects the layout: pause and ability buttons are on screen', async (
     expect(b.x + b.width).toBeLessThanOrEqual(vp.width);
     expect(b.y + b.height).toBeLessThanOrEqual(vp.height);
     expect(b.width).toBeGreaterThanOrEqual(40);
+  }
+});
+
+test('procedural generation is bit-identical in this browser engine (cross-engine determinism)', async ({
+  page,
+}) => {
+  await page.goto('./');
+  for (const [seed, want] of Object.entries(GOLDEN_GENERATION)) {
+    const got = await page.evaluate(
+      (sd) => (window as unknown as { __stellar: Stellar }).__stellar.genHash(sd, 200),
+      Number(seed),
+    );
+    expect(got, `seed ${seed}`).toBe(want);
   }
 });

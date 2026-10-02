@@ -5,12 +5,12 @@
  */
 export const TUNING = {
   // ## Simulation
-  /** Fixed simulation rate in ticks per second. The sim never reads wall-clock time. */
-  SIM_HZ: 60,
+  /** Fixed simulation rate in ticks per second (2 ticks per 60 Hz frame). Higher rates shrink the tick slack in the passability proof. The sim never reads wall-clock time. */
+  SIM_HZ: 120,
   /** Longest wall-clock frame accepted by the accumulator, in seconds (avoids the spiral of death after tab switches). */
   MAX_FRAME_DT: 0.1,
   /** Max sim ticks per rendered frame; extra time is dropped (game slows rather than stutters). */
-  MAX_TICKS_PER_FRAME: 4,
+  MAX_TICKS_PER_FRAME: 8,
   /** Quantisation of analog steering in InputFrame (ints in [-Q, Q]); makes replays exact. */
   INPUT_QUANT: 10000,
 
@@ -24,7 +24,7 @@ export const TUNING = {
 
   // ## Chunks
   /** Length of one procedural chunk along the track, in metres. */
-  CHUNK_LENGTH: 150,
+  CHUNK_LENGTH: 200,
   /** Chunks generated ahead of the one the ship is in. */
   CHUNKS_AHEAD: 2,
   /** Obstacle influence (radius + ship + margin + half-length, or a gravity well's range) must stay this far inside a chunk's ends. */
@@ -38,7 +38,7 @@ export const TUNING = {
   /** Capacity of one chunk's shard store. */
   MAX_SHARDS_PER_CHUNK: 48,
   /** Capacity of slices per chunk (lattice steps along s). */
-  MAX_SLICES: 64,
+  MAX_SLICES: 96,
 
   // ## Forward speed
   /** Cruise speed at difficulty 0, in m/s (before the ship's speed factor). */
@@ -130,9 +130,9 @@ export const TUNING = {
 
   // ## Passability validation
   /** Extra clearance demanded by the validator at difficulty 0 (metres). */
-  MARGIN_EASY: 0.32,
+  MARGIN_EASY: 0.25,
   /** Extra clearance demanded by the validator at difficulty 1 (metres). */
-  MARGIN_HARD: 0.1,
+  MARGIN_HARD: 0.08,
   /** Max obstacles the repair step may remove before falling back to the safe pattern. */
   MAX_REPAIR_REMOVALS: 6,
   /** Full regeneration attempts (with fresh random draws) before the safe fallback pattern. */

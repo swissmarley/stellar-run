@@ -1,5 +1,6 @@
 import './styles.css';
-import { HandmadeSource } from './core/gen/handmade.ts';
+import { ProceduralSource } from './core/gen/generator.ts';
+import { generationHash } from './core/gen/golden.ts';
 import type { RunSim } from './core/sim/run-sim.ts';
 import { Game } from './game/game.ts';
 import { Hud } from './game/hud/hud.ts';
@@ -42,7 +43,8 @@ function boot(): void {
     open: () => {},
   });
 
-  game = new Game(renderer, input, hud, ui, new HandmadeSource(), {
+  const source = new ProceduralSource();
+  game = new Game(renderer, input, hud, ui, source, {
     onRunEnd(sim: RunSim) {
       const newBest = sim.score > best;
       if (newBest) best = sim.score;
@@ -102,6 +104,7 @@ function boot(): void {
       score: game.sim.score,
     }),
     kill: () => game.sim.debugKill(),
+    genHash: (seed: number, n: number) => generationHash(seed, n),
   };
 
   if (import.meta.env.PROD && 'serviceWorker' in navigator) {

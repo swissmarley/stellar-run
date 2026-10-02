@@ -1,6 +1,8 @@
 import { DT, SHIP_X_LIMIT, SHIP_Y_LIMIT, TUNING } from '../../data/tuning.ts';
 import type { StateHasher } from '../det/hash.ts';
 import { approach } from '../det/math.ts';
+import { COLS, cellX, cellY, ROWS } from '../gen/grid.ts';
+import { nearestCellIn } from '../gen/passability.ts';
 import type { ChunkSource } from '../gen/source.ts';
 import { ChunkData, KIND_WELL, OF_DESTROYED, OF_PASSED, OF_REMOVED, SHAPE_SPHERE } from './chunk.ts';
 import { lateralReach, pointClearance, sweptClearance } from './collision.ts';
@@ -119,6 +121,7 @@ export class RunSim {
     for (let i = 0; i <= TUNING.CHUNKS_AHEAD; i++) this.generateChunk(i);
     const c0 = this.chunk(0)!;
     this.speed = c0.cruise * st.speedFactor * TUNING.START_SPEED_FRACTION;
+    if (this.speed > c0.vCert) this.speed = c0.vCert;
     this.biomeMask = 1 << c0.biome;
     this.events.push(EV.CHUNK_ENTER, 0, c0.biome, c0.difficulty);
   }
@@ -235,16 +238,9 @@ export class RunSim {
       if (this.focus > 1) this.focus = 1;
     }
 
-    // Forward speed, clamped to the certified speed of the chunk(s) this tick touches.
+    // This tick moves at `this.speed`, which was fixed (and clamped) at the end of the previous tick, so
+    // controllers (and the bot's drift feed-forward) know the exact forward step in advance.
     const cur = this.current;
-    const desired = cur.cruise * st.speedFactor * (this.boosting ? TUNING.BOOST_MULT : 1);
-    this.speed = approach(this.speed, desired, TUNING.SPEED_ACCEL * DT);
-    let cap = cur.vCert;
-    if (this.s + this.speed * DT >= cur.endS) {
-      const nx = this.chunk(this.chunkIndex + 1);
-      if (nx && nx.vCert < cap) cap = nx.vCert;
-    }
-    if (this.speed > cap) this.speed = cap;
 
     // Lateral velocity: circle-clamped command plus gravity drift (per metre of travel × speed).
     let cx = inp.steerX / Q;
@@ -342,6 +338,23 @@ export class RunSim {
       if (nc.biome !== cur.biome) ev.push(EV.BIOME_CHANGE, nc.biome);
       this.biomeMask |= 1 << nc.biome;
     }
+    this.updateSpeed();
+  }
+
+  /**
+   * Forward speed for the NEXT tick: approaches the desired cruise/boost speed, then is clamped to the
+   * certified speed of every chunk the next tick can touch. The passability proof relies on this clamp.
+   */
+  private updateSpeed(): void {
+    const cur = this.current;
+    const desired = cur.cruise * this.stats.speedFactor * (this.boosting ? TUNING.BOOST_MULT : 1);
+    this.speed = approach(this.speed, desired, TUNING.SPEED_ACCEL * DT);
+    let cap = cur.vCert;
+    if (this.s + this.speed * DT >= cur.endS) {
+      const nx = this.chunk(this.chunkIndex + 1);
+      if (nx && nx.vCert < cap) cap = nx.vCert;
+    }
+    if (this.speed > cap) this.speed = cap;
   }
 
   /** Returns the index of an obstacle hit this tick in chunk c, or -1. Also finalises near-misses. */
@@ -511,6 +524,21 @@ export class RunSim {
     this.deathObstacle = -1;
     const c = this.current;
     this.speed = c.cruise * this.stats.speedFactor;
+    this.updateSpeed();
+    // Re-enter at the nearest cell that is certified viable at the next lattice boundary.
+    if (c.sliceCount > 0) {
+      let k = Math.floor((this.s - c.startS) / c.sliceLen) + 1;
+      if (k > c.sliceCount) k = c.sliceCount;
+      if (k < 0) k = 0;
+      const cell = nearestCellIn(c.viable, k * ROWS, this.x, this.y);
+      if (cell >= 0) {
+        const col = cell % COLS;
+        this.x = cellX(col);
+        this.y = cellY((cell - col) / COLS);
+        this.prevX = this.x;
+        this.prevY = this.y;
+      }
+    }
     this.events.push(EV.REVIVE, this.x, this.y, this.s);
   }
 

@@ -104,7 +104,10 @@ export type ElementDef =
     }
   | {
       readonly type: 'gate';
+      /** Horizontal bars (top/bottom of the window). */
       readonly obstacle: string;
+      /** Vertical bars (left/right of the window). */
+      readonly obstacleV: string;
       readonly s: number;
       readonly opening: DRange;
     }
@@ -193,6 +196,11 @@ export interface DifficultyCurveDef {
   readonly maxStep: number;
   /** Gap between patterns in metres. */
   readonly patternGap: DRange;
+  /**
+   * Calm lead-in at the start of every chunk, in seconds of travel at the certified speed. Every position the
+   * player can reach at a chunk boundary must be able to survive the next chunk, which needs lateral room.
+   */
+  readonly leadInSeconds: number;
   /** Multiplier on element counts. */
   readonly density: DRange;
   /** How strongly persistent skill (−1..1) shifts difficulty. */

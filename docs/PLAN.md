@@ -211,7 +211,7 @@ The project folder `/Users/nakya/Documents/ClaudeProjects/Stellar-Run` is empty 
 ## Milestone checklist
 - [x] M0 Setup
 - [x] M1 Core loop
-- [ ] M2 Procgen + director
+- [x] M2 Procgen + director
 - [ ] M3 Juice
 - [ ] M4 Meta
 - [ ] M5 Optimise, accessibility, report

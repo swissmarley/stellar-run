@@ -1,5 +1,6 @@
 import { BIOMES } from './biomes.ts';
 import { OBSTACLES } from './obstacles.ts';
+import { PATTERNS } from './patterns.ts';
 import { SHIPS } from './ships.ts';
 import { UPGRADES } from './upgrades.ts';
 
@@ -17,6 +18,13 @@ export const OBSTACLE_INDEX = indexMap(OBSTACLES, 'obstacle');
 export const SHIP_INDEX = indexMap(SHIPS, 'ship');
 export const BIOME_INDEX = indexMap(BIOMES, 'biome');
 export const UPGRADE_INDEX = indexMap(UPGRADES, 'upgrade');
+export const PATTERN_INDEX = indexMap(PATTERNS, 'pattern');
+
+export function patternIndex(id: string): number {
+  const i = PATTERN_INDEX[id];
+  if (i === undefined) throw new Error(`Unknown pattern "${id}"`);
+  return i;
+}
 
 export function obstacleIndex(id: string): number {
   const i = OBSTACLE_INDEX[id];
