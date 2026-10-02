@@ -1,0 +1,20 @@
+# Decisions log
+
+Short records of choices that were ambiguous or deviate from the original brief. Newest last.
+
+| # | Date | Decision | Why |
+|---|------|----------|-----|
+| 1 | 2026-10-02 | **Engine: not Unity.** | Unity is not installed. Installing it needs a Unity ID sign-in and licence activation, which the agent cannot do. Godot 4.7 + GDScript was proposed and accepted first. |
+| 2 | 2026-10-02 | **Platform: web (PWA) on GitHub Pages instead of native iOS/Android.** | The owner prefers open source and does not want to depend on the Apple/Google app stores. The game is installable to a phone's home screen as a PWA and works offline. |
+| 3 | 2026-10-02 | **Stack: TypeScript + Three.js + Vite** (not a Godot web export). | Payload is ~10× smaller, start-up is near instant and mobile-browser performance is better. The pure-TS core runs in Node, so tests and the 100-run bot are fast. |
+| 4 | 2026-10-02 | **Licence: MIT** for code; generated placeholder art/audio is **CC0**. | Owner's choice. |
+| 5 | 2026-10-02 | **Monetisation: in-game currency only.** `IAdService` / `IIapService` exist as interfaces with no-op implementations. | No ads, no real-money payments, no pay-to-win. A fork could plug in a provider without touching game code. |
+| 6 | 2026-10-02 | **Native-store requirements mapped to web equivalents.** | "iOS/Android builds" → a production web build tested in Chromium (Android engine) and WebKit (iOS engine), plus real Mobile Safari in the iOS simulator. "Install < 150 MB" → gzipped download < 1 MB. CoreHaptics/Vibrator → `navigator.vibrate`, which iOS Safari does not support, so haptics are a no-op there. ATT → not applicable on the web; the consent layer stays GDPR-ready. |
+| 7 | 2026-10-02 | **Kinematic lateral motion in the sim** (velocity changes instantly, within a per-axis cap). | The passability proof assumes the ship can move one lattice cell per slice; an acceleration term would break that guarantee. The feel of weight comes from presentation instead: banking, camera spring and FOV. |
+| 8 | 2026-10-02 | **Moving hazards depend on track distance, not time.** | Passability then does not depend on the speed profile. A chunk certified at its maximum speed `v_cert` (boost and upgrades included) is passable at every lower speed. Focus slow-mo and hit-stop change only wall-clock time. |
+| 9 | 2026-10-02 | **Full chunk-boundary fairness (φ = 1).** Every lattice-reachable position at the end of chunk N can survive chunk N+1. | This is what makes "provably passable" hold by induction for the whole run, not just per chunk. A player is never trapped by where they happened to cross a chunk boundary. |
+| 10 | 2026-10-02 | **Corridor of 31 × 21 cells at 0.3 m** (X ∈ [-4.65, 4.65], Y ∈ [-3.15, 3.15]). | Odd counts put a cell centre at the origin, which is the spawn point. 31 columns fit one signed 32-bit integer per row, so JS bitwise operations never touch the sign bit. |
+| 11 | 2026-10-02 | **Focus = a still hold of ≥ 220 ms; boost = a short tap.** | In drag-steering mode the thumb is always down, so "hold" alone would trigger constantly. Both actions are remappable. Needs playtesting on devices. |
+| 12 | 2026-10-02 | **Okabe–Ito colour-blind-safe palette by default**, plus shape and rim cues. | Hazards (vermillion) and pickups (sky blue) are told apart by shape and silhouette as well as colour. |
+| 13 | 2026-10-02 | **Procedural placeholder audio**, pre-rendered at boot with `OfflineAudioContext`. | No audio files ship. Each cue can instead point to a file URL, so real audio drops in without code changes. |
+| 14 | 2026-10-02 | **Zero third-party runtime dependencies except `three`.** Test runner, bot, PNG encoder and service worker are in-house; tooling deps are listed in the README. | Required by the brief. |
